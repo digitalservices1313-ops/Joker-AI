@@ -12,6 +12,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -69,6 +70,8 @@ class MainActivity : AppCompatActivity() {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
 
+    private lateinit var jokerOrb: JokerOrbView
+    private lateinit var tvOrbStatus: TextView
     private lateinit var chatLog: TextView
     private lateinit var scrollView: ScrollView
     private lateinit var micBtn: ImageButton
@@ -81,7 +84,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Fallback Intent if in-app speech recognizer service is unavailable
     private val fallbackSpeechLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
             val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
@@ -89,6 +91,8 @@ class MainActivity : AppCompatActivity() {
             if (!spokenText.isNullOrEmpty()) {
                 processMessage(spokenText)
             }
+        } else {
+            setOrbIdle()
         }
     }
 
@@ -96,16 +100,40 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        jokerOrb = findViewById(R.id.jokerOrb)
+        tvOrbStatus = findViewById(R.id.tvOrbStatus)
         val input = findViewById<EditText>(R.id.etMessage)
         val sendBtn = findViewById<Button>(R.id.btnSend)
         micBtn = findViewById(R.id.btnMic)
         chatLog = findViewById(R.id.tvChat)
         scrollView = findViewById(R.id.scrollView)
 
+        // Initialize Text-to-Speech with Voice-Reactive Orb Listener
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
                 tts?.setSpeechRate(1.05f)
+
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        runOnUiThread {
+                            jokerOrb.setState(OrbState.SPEAKING)
+                            tvOrbStatus.text = "SPEAKING... // AUDIO OUT"
+                        }
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        runOnUiThread {
+                            setOrbIdle()
+                        }
+                    }
+
+                    override fun onError(utteranceId: String?) {
+                        runOnUiThread {
+                            setOrbIdle()
+                        }
+                    }
+                })
             }
         }
 
@@ -128,6 +156,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setOrbIdle() {
+        jokerOrb.setState(OrbState.IDLE)
+        tvOrbStatus.text = "STANDBY // TAP MIC TO SPEAK"
+        micBtn.clearColorFilter()
+    }
+
     private fun setupSpeechRecognizer() {
         if (!SpeechRecognizer.isRecognitionAvailable(this)) return
 
@@ -135,8 +169,9 @@ class MainActivity : AppCompatActivity() {
             speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
-                        micBtn.setColorFilter(Color.parseColor("#00FF66")) // Listening Green
-                        Toast.makeText(this@MainActivity, "🎤 Sun raha hoon... Boliye!", Toast.LENGTH_SHORT).show()
+                        micBtn.setColorFilter(Color.parseColor("#00FF66"))
+                        jokerOrb.setState(OrbState.LISTENING)
+                        tvOrbStatus.text = "LISTENING... // RECEIVING AUDIO"
                     }
 
                     override fun onBeginningOfSpeech() {}
@@ -144,13 +179,17 @@ class MainActivity : AppCompatActivity() {
                     override fun onBufferReceived(buffer: ByteArray?) {}
 
                     override fun onEndOfSpeech() {
-                        resetMicUI()
+                        isListening = false
+                        jokerOrb.setState(OrbState.THINKING)
+                        tvOrbStatus.text = "PROCESSING... // NEURAL NET"
+                        micBtn.clearColorFilter()
                     }
 
                     override fun onError(error: Int) {
-                        resetMicUI()
-                        // Agar direct in-app fail ho to Google fallback use karega
+                        isListening = false
+                        micBtn.clearColorFilter()
                         if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                            setOrbIdle()
                             Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
                         } else {
                             startFallbackVoiceInput()
@@ -158,11 +197,14 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResults(results: Bundle?) {
-                        resetMicUI()
+                        isListening = false
+                        micBtn.clearColorFilter()
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val spokenText = matches?.firstOrNull()
                         if (!spokenText.isNullOrEmpty()) {
                             processMessage(spokenText)
+                        } else {
+                            setOrbIdle()
                         }
                     }
 
@@ -175,15 +217,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun resetMicUI() {
-        isListening = false
-        micBtn.clearColorFilter()
-    }
-
     private fun startInAppListening() {
         if (isListening) {
             speechRecognizer?.stopListening()
-            resetMicUI()
+            isListening = false
+            setOrbIdle()
             return
         }
 
@@ -205,7 +243,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startFallbackVoiceInput() {
-        resetMicUI()
+        isListening = false
+        micBtn.clearColorFilter()
+        jokerOrb.setState(OrbState.LISTENING)
+        tvOrbStatus.text = "LISTENING... // AUDIO FEED"
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
@@ -213,6 +254,7 @@ class MainActivity : AppCompatActivity() {
         try {
             fallbackSpeechLauncher.launch(intent)
         } catch (e: Exception) {
+            setOrbIdle()
             Toast.makeText(this, "Voice recognition support nahi hai", Toast.LENGTH_SHORT).show()
         }
     }
@@ -221,6 +263,9 @@ class MainActivity : AppCompatActivity() {
         chatLog.append("\nYou: $userText\n")
         chatLog.append("🃏 Joker AI: Soch raha hoon... 💭\n")
         scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+
+        jokerOrb.setState(OrbState.THINKING)
+        tvOrbStatus.text = "THINKING... // NEURAL NET PROCESSING"
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -232,9 +277,9 @@ class MainActivity : AppCompatActivity() {
                     chatLog.append("🃏 Joker AI: ${response.reply}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
 
+                    // Voice output with Utterance Listener (Orb vibrates in sync with speech)
                     tts?.speak(response.reply, TextToSpeech.QUEUE_FLUSH, null, "JokerResponse")
 
-                    // Smart Action Detection: AI response se ya user text se 100% detect karega
                     val finalAction = detectAction(response.action, userText)
                     val finalTarget = response.target ?: extractTarget(userText)
 
@@ -244,6 +289,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    setOrbIdle()
                     val currentText = chatLog.text.toString()
                     val cleanText = currentText.replace("🃏 Joker AI: Soch raha hoon... 💭\n", "")
                     chatLog.text = cleanText
@@ -254,7 +300,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Fail-Safe Action Detection (AI bhul bhi jaye to bhi phone command chalegi)
     private fun detectAction(serverAction: String?, userText: String): String {
         if (!serverAction.isNullOrEmpty() && serverAction != "NONE") {
             return serverAction
@@ -277,7 +322,6 @@ class MainActivity : AppCompatActivity() {
         } else ""
     }
 
-    // 100% Guaranteed Action Launcher
     private fun executeAgentAction(action: String, target: String) {
         CoroutineScope(Dispatchers.Main).launch {
             delay(1000)
