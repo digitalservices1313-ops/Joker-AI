@@ -19,20 +19,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle 8.2
+    - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.2'
 
-    - name: Generate Gradle Wrapper
+    - name: Grant execute permission for gradlew
       run: |
         cd android-app
-        gradle wrapper
+        chmod +x gradlew || true
 
     - name: Build Debug APK
       run: |
         cd android-app
-        chmod +x gradlew
         ./gradlew assembleDebug --stacktrace
 
     - name: Upload Joker AI APK
@@ -40,3 +37,4 @@ jobs:
       with:
         name: Joker-AI-APK
         path: android-app/app/build/outputs/apk/debug/app-debug.apk
+        
