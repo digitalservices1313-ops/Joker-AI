@@ -26,7 +26,7 @@ interface JokerApiService {
 class MainActivity : AppCompatActivity() {
 
     // Backend URL (Backend connect karne ke baad ise replace karenge)
-    private val BASE_URL = "https://your-backend-service.onrender.com/"
+    private val BASE_URL = "https://joker-ai-brain.onrender.com/"
 
     private val api: JokerApiService? by lazy {
         try {
