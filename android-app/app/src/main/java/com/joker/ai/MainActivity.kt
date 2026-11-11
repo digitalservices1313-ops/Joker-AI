@@ -3,7 +3,10 @@ package com.joker.ai
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -19,6 +22,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -30,7 +34,11 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 data class ChatRequest(val message: String)
-data class ChatResponse(val reply: String)
+data class ChatResponse(
+    val reply: String,
+    val action: String? = null,
+    val target: String? = null
+)
 
 interface JokerApiService {
     @POST("/api/chat")
@@ -64,7 +72,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scrollView: ScrollView
     private lateinit var micBtn: ImageButton
 
-    // Audio Permission Request Handler
     private val audioPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             startInAppListening()
@@ -83,7 +90,6 @@ class MainActivity : AppCompatActivity() {
         chatLog = findViewById(R.id.tvChat)
         scrollView = findViewById(R.id.scrollView)
 
-        // Initialize Text-to-Speech (Joker AI Voice Output)
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale.getDefault()
@@ -91,10 +97,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Initialize In-App Direct Speech Recognizer (Bina Google Popup ke)
         setupSpeechRecognizer()
 
-        // Send Button Click
         sendBtn.setOnClickListener {
             val userText = input.text.toString().trim()
             if (userText.isNotEmpty()) {
@@ -103,7 +107,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Mic Button Click
         micBtn.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 startInAppListening()
@@ -114,17 +117,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            Toast.makeText(this, "Speech recognition not available", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) return
 
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
             setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) {
                     chatLog.append("\n🎤 Joker AI: Sun raha hoon, boliye...\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
-                    micBtn.setColorFilter(android.graphics.Color.parseColor("#00FF66")) // Listening status (Green)
+                    micBtn.setColorFilter(android.graphics.Color.parseColor("#00FF66"))
                 }
 
                 override fun onBeginningOfSpeech() {}
@@ -189,8 +189,13 @@ class MainActivity : AppCompatActivity() {
                     chatLog.append("🃏 Joker AI: ${response.reply}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
 
-                    // Joker AI bol kar sunayega
+                    // Speak reply
                     tts?.speak(response.reply, TextToSpeech.QUEUE_FLUSH, null, "JokerResponse")
+
+                    // Execute Android Action
+                    if (!response.action.isNullOrEmpty() && response.action != "NONE") {
+                        executeAgentAction(response.action, response.target ?: "")
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -200,6 +205,49 @@ class MainActivity : AppCompatActivity() {
                     chatLog.append("🃏 Joker AI [Error]: ${e.localizedMessage ?: "Connection error"}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
                 }
+            }
+        }
+    }
+
+    // Autonomous Action Executor
+    private fun executeAgentAction(action: String, target: String) {
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(1200) // User ko bolne ka waqt de kar app open karega
+            try {
+                when (action) {
+                    "OPEN_YOUTUBE" -> {
+                        val launchIntent = packageManager.getLaunchIntentForPackage("com.google.android.youtube")
+                        if (launchIntent != null) {
+                            startActivity(launchIntent)
+                        } else {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com")))
+                        }
+                    }
+                    "OPEN_WHATSAPP" -> {
+                        val launchIntent = packageManager.getLaunchIntentForPackage("com.whatsapp")
+                        if (launchIntent != null) {
+                            startActivity(launchIntent)
+                        } else {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/")))
+                        }
+                    }
+                    "OPEN_CAMERA" -> {
+                        val cameraIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+                        startActivity(cameraIntent)
+                    }
+                    "OPEN_SETTINGS" -> {
+                        val settingsIntent = Intent(Settings.ACTION_SETTINGS)
+                        startActivity(settingsIntent)
+                    }
+                    "WEB_SEARCH" -> {
+                        val query = if (target.isNotEmpty()) target else "latest news"
+                        val searchIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}"))
+                        startActivity(searchIntent)
+                    }
+                    else -> {}
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "Action execute nahi ho paaya: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
