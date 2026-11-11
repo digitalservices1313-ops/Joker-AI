@@ -30,13 +30,13 @@
             android:id="@+id/tvChat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Joker AI: Online & Ready for commands.\n"
+            android:text="Joker AI: Online and Ready for commands.\n"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:lineSpacingExtra="4dp" />
     </ScrollView>
 
-    <!-- Message Input Box & Send Button -->
+    <!-- Message Input Box and Send Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
