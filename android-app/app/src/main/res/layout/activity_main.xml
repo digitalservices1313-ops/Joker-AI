@@ -3,90 +3,149 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#0D0D11"
+    android:background="#070709"
     android:padding="16dp">
 
-    <!-- Header: Compact Joker Logo + Title -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:paddingBottom="14dp">
-
-        <ImageView
-            android:id="@+id/ivHeaderLogo"
-            android:layout_width="38dp"
-            android:layout_height="38dp"
-            android:layout_marginEnd="10dp"
-            android:src="@drawable/joker_logo"
-            android:scaleType="fitCenter"
-            android:contentDescription="Joker Logo" />
-
-        <TextView
-            android:id="@+id/tvHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Joker AI Agent"
-            android:textColor="#FF1E44"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-    <!-- Chat Display Area -->
-    <ScrollView
-        android:id="@+id/scrollView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
-
-        <TextView
-            android:id="@+id/tvChat"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Joker AI: Online and Ready. Tap Mic to speak!\n"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:lineSpacingExtra="4dp" />
-    </ScrollView>
-
-    <!-- Message Input Box, Mic Button and Send Button -->
+    <!-- Top Header: Logo + Futuristic Agent Badge -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="8dp">
+        android:paddingBottom="10dp">
+
+        <ImageView
+            android:id="@+id/ivHeaderLogo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/joker_logo"
+            android:scaleType="fitCenter"
+            android:contentDescription="Joker Logo" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="JOKER AI"
+                android:textColor="#FF1E44"
+                android:textSize="20sp"
+                android:letterSpacing="0.08"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NEURAL CORE // ACTIVE"
+                android:textColor="#555566"
+                android:textSize="11sp"
+                android:letterSpacing="0.05" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvLiveBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="● ONLINE"
+            android:textColor="#00FF66"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Center Stage: Glowing 3D Particle Orb -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="6dp"
+        android:paddingBottom="10dp">
+
+        <com.joker.ai.JokerOrbView
+            android:id="@+id/jokerOrb"
+            android:layout_width="220dp"
+            android:layout_height="220dp" />
+
+        <TextView
+            android:id="@+id/tvOrbStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="STANDBY // TAP MIC TO SPEAK"
+            android:textColor="#888899"
+            android:textSize="12sp"
+            android:letterSpacing="0.06"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Translucent Chat Display Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#101016"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <ScrollView
+            android:id="@+id/scrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <TextView
+                android:id="@+id/tvChat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Joker AI: Neural link connected. Ready for commands.\n"
+                android:textColor="#DDDDDD"
+                android:textSize="15sp"
+                android:lineSpacingExtra="4dp" />
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- Bottom Floating Dock: Input, Mic, and Send -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="10dp">
 
         <EditText
             android:id="@+id/etMessage"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
-            android:hint="Type or tap mic..."
-            android:textColorHint="#777777"
+            android:hint="Ask Joker or tap mic..."
+            android:textColorHint="#555566"
             android:textColor="#FFFFFF"
-            android:backgroundTint="#FF1E44"
-            android:padding="12dp" />
+            android:background="#15151F"
+            android:paddingHorizontal="14dp"
+            android:textSize="14sp" />
 
-        <!-- Image 2 Wala Clean Mic Icon Button -->
         <ImageButton
             android:id="@+id/btnMic"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="8dp"
             android:src="@drawable/ic_mic"
             android:scaleType="centerInside"
-            android:backgroundTint="#220D15"
-            android:contentDescription="Voice Mic" />
+            android:background="#200B13"
+            android:contentDescription="Voice Input" />
 
         <Button
             android:id="@+id/btnSend"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Send"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:text="SEND"
             android:backgroundTint="#FF1E44"
             android:textColor="#FFFFFF"
             android:textStyle="bold" />
