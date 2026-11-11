@@ -45,17 +45,18 @@
             android:id="@+id/tvChat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Joker AI: Online and Ready for commands.\n"
+            android:text="Joker AI: Online and Ready. Tap Mic to speak!\n"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:lineSpacingExtra="4dp" />
     </ScrollView>
 
-    <!-- Message Input Box and Send Button -->
+    <!-- Message Input Box, Mic Button and Send Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingTop="8dp">
 
         <EditText
@@ -63,16 +64,27 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Type message or command..."
+            android:hint="Type or tap mic..."
             android:textColorHint="#777777"
             android:textColor="#FFFFFF"
             android:backgroundTint="#FF1E44"
             android:padding="12dp" />
 
         <Button
+            android:id="@+id/btnMic"
+            android:layout_width="54dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="🎙️"
+            android:textSize="18sp"
+            android:backgroundTint="#220D15"
+            android:textColor="#FF1E44" />
+
+        <Button
             android:id="@+id/btnSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:text="Send"
             android:backgroundTint="#FF1E44"
             android:textColor="#FFFFFF"
