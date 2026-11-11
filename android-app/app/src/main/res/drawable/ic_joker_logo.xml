@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 1. Dark Black Background -->
+    <path
+        android:fillColor="#0D0614"
+        android:pathData="M0,0h108v108h-108z"/>
+
+    <!-- 2. Neon Purple Glow Ring -->
+    <path
+        android:fillColor="#220D38"
+        android:pathData="M54,54m-42,0a42,42 0 1,0 84,0a42,42 0 1,0 -84,0"/>
+
+    <!-- 3. Joker Hat/Hair (Neon Purple) -->
+    <path
+        android:fillColor="#8B00FF"
+        android:pathData="M54,20 C46,20 34,24 30,32 C36,33 42,30 46,34 C38,36 32,42 32,46 C38,44 44,45 48,47 C50,42 52,36 54,20 Z" />
+    <path
+        android:fillColor="#8B00FF"
+        android:pathData="M54,20 C62,20 74,24 78,32 C72,33 66,30 62,34 C70,36 76,42 76,46 C70,44 64,45 60,47 C58,42 56,36 54,20 Z" />
+
+    <!-- 4. Glowing Neon Green Eyes -->
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M35,46 C37,42 46,47 48,48 C44,52 38,50 35,46 Z" />
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M73,46 C71,42 62,47 60,48 C64,52 70,50 73,46 Z" />
+
+    <!-- 5. Nose Accent -->
+    <path
+        android:fillColor="#00FF66"
+        android:pathData="M54,52 L51,56 L57,56 Z" />
+
+    <!-- 6. Menacing Wicked Grin (Crimson Red) -->
+    <path
+        android:fillColor="#FF0055"
+        android:pathData="M26,62 C32,78 44,85 54,85 C64,85 76,78 82,62 C74,70 64,74 54,74 C44,74 34,70 26,62 Z" />
+
+    <!-- 7. Sharp White Teeth -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,65 L36,70 L40,66 L44,71 L49,67 L54,72 L59,67 L64,71 L68,66 L72,70 L76,65 C68,71 61,73 54,73 C47,73 40,71 32,65 Z" />
+
+    <!-- 8. Neon Smile Scars -->
+    <path
+        android:strokeColor="#00FF66"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M24,61 L18,57 M84,61 L90,57" />
+
+</vector>
