@@ -70,15 +70,16 @@
             android:backgroundTint="#FF1E44"
             android:padding="12dp" />
 
-        <Button
+        <!-- Image 2 Wala Clean Mic Icon Button -->
+        <ImageButton
             android:id="@+id/btnMic"
-            android:layout_width="54dp"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="6dp"
-            android:text="🎙️"
-            android:textSize="18sp"
+            android:src="@drawable/ic_mic"
+            android:scaleType="centerInside"
             android:backgroundTint="#220D15"
-            android:textColor="#FF1E44" />
+            android:contentDescription="Voice Mic" />
 
         <Button
             android:id="@+id/btnSend"
