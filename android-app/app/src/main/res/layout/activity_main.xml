@@ -2,9 +2,9 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0E">
+    android:background="#08080C">
 
-    <!-- Top Bar: Menu + Greeting + Avatar -->
+    <!-- Top Bar -->
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
@@ -13,7 +13,7 @@
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
         android:paddingTop="12dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="6dp">
 
         <TextView
             android:id="@+id/btnMenu"
@@ -57,53 +57,56 @@
             android:contentDescription="Avatar" />
     </LinearLayout>
 
-    <!-- Main Scrollable Content -->
+    <!-- TAB 1: HOME PAGE (Sirf Bada Orb + System Cards - Zero Chat Clutter) -->
     <ScrollView
+        android:id="@+id/layoutHome"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/topBar"
         android:layout_above="@+id/bottomDock"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:paddingHorizontal="16dp">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="12dp">
 
-            <!-- 3D Fluid Red Particle Orb -->
+            <!-- Big Majestic 3D Fluid Red Particle Orb -->
             <com.joker.ai.JokerOrbView
                 android:id="@+id/jokerOrb"
-                android:layout_width="230dp"
-                android:layout_height="230dp"
-                android:layout_marginTop="6dp" />
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_marginTop="8dp" />
 
-            <!-- Video 1 Style: Pill Status Badge -->
+            <!-- Status Pill Badge -->
             <TextView
                 android:id="@+id/tvOrbStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:background="#1C0A10"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="5dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="6dp"
                 android:text="● STANDBY // READY FOR COMMANDS"
                 android:textColor="#FF3355"
                 android:textSize="11sp"
                 android:letterSpacing="0.04"
                 android:textStyle="bold" />
 
-            <!-- Video 1 Style: Weather / System Diagnostic Card -->
+            <!-- Weather & System Status Card -->
             <LinearLayout
                 android:id="@+id/cardDiagnostics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="16dp"
                 android:background="#121218"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="12dp">
+                android:padding="14dp">
 
                 <TextView
                     android:id="@+id/tvWeatherTemp"
@@ -111,14 +114,14 @@
                     android:layout_height="wrap_content"
                     android:text="32°C"
                     android:textColor="#FFFFFF"
-                    android:textSize="22sp"
+                    android:textSize="24sp"
                     android:textStyle="bold" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="12dp"
+                    android:layout_marginStart="14dp"
                     android:orientation="vertical">
 
                     <TextView
@@ -141,14 +144,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="☀️"
-                    android:textSize="22sp" />
+                    android:textSize="24sp" />
             </LinearLayout>
 
-            <!-- Video 1 Style: 3 Quick Action Pills -->
+            <!-- 3 Quick Action Pills -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
                 android:orientation="horizontal"
                 android:gravity="center">
 
@@ -160,7 +163,7 @@
                     android:layout_marginEnd="6dp"
                     android:background="#15151F"
                     android:gravity="center"
-                    android:paddingVertical="9dp"
+                    android:paddingVertical="10dp"
                     android:text="📱 Screen"
                     android:textColor="#DDDDDD"
                     android:textSize="12sp"
@@ -174,7 +177,7 @@
                     android:layout_marginHorizontal="3dp"
                     android:background="#15151F"
                     android:gravity="center"
-                    android:paddingVertical="9dp"
+                    android:paddingVertical="10dp"
                     android:text="🧠 Memories"
                     android:textColor="#DDDDDD"
                     android:textSize="12sp"
@@ -188,75 +191,90 @@
                     android:layout_marginStart="6dp"
                     android:background="#15151F"
                     android:gravity="center"
-                    android:paddingVertical="9dp"
+                    android:paddingVertical="10dp"
                     android:text="🌐 Language"
                     android:textColor="#DDDDDD"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Chat Transcript Box -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="8dp"
-                android:background="#101016"
-                android:orientation="vertical"
-                android:padding="10dp">
-
-                <ScrollView
-                    android:id="@+id/scrollView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:fillViewport="true">
-
-                    <TextView
-                        android:id="@+id/tvChat"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Joker AI: Online and Ready for commands.\n"
-                        android:textColor="#CCCCCC"
-                        android:textSize="13sp"
-                        android:lineSpacingExtra="3dp" />
-                </ScrollView>
-            </LinearLayout>
-
-            <!-- Quick Text Input Bar (Typing support) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <EditText
-                    android:id="@+id/etMessage"
-                    android:layout_width="0dp"
-                    android:layout_height="44dp"
-                    android:layout_weight="1"
-                    android:hint="Type or tap center mic..."
-                    android:textColorHint="#666677"
-                    android:textColor="#FFFFFF"
-                    android:background="#14141E"
-                    android:paddingHorizontal="12dp"
-                    android:textSize="13sp" />
-
-                <Button
-                    android:id="@+id/btnSend"
-                    android:layout_width="wrap_content"
-                    android:layout_height="44dp"
-                    android:layout_marginStart="8dp"
-                    android:text="SEND"
-                    android:backgroundTint="#FF0033"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
         </LinearLayout>
     </ScrollView>
 
-    <!-- Video 1 Style: Bottom Navigation Dock with Center Big Elevated Mic -->
+    <!-- TAB 2: DEDICATED CHAT PAGE (Chat Tab dabane par khulega) -->
+    <LinearLayout
+        android:id="@+id/layoutChat"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/topBar"
+        android:layout_above="@+id/bottomDock"
+        android:orientation="vertical"
+        android:padding="14dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CONVERSATION LOG"
+            android:textColor="#888899"
+            android:textSize="11sp"
+            android:letterSpacing="0.06"
+            android:paddingBottom="8dp" />
+
+        <!-- Chat History Scroll Area -->
+        <ScrollView
+            android:id="@+id/scrollView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#101016"
+            android:padding="12dp"
+            android:fillViewport="true">
+
+            <TextView
+                android:id="@+id/tvChat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Joker AI: Neural link connected. How can I help you, Boss?\n"
+                android:textColor="#DDDDDD"
+                android:textSize="14sp"
+                android:lineSpacingExtra="4dp" />
+        </ScrollView>
+
+        <!-- Typing Input Box and Send Button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="10dp">
+
+            <EditText
+                android:id="@+id/etMessage"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:hint="Type message to Joker..."
+                android:textColorHint="#666677"
+                android:textColor="#FFFFFF"
+                android:background="#161622"
+                android:paddingHorizontal="14dp"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btnSend"
+                android:layout_width="wrap_content"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:text="SEND"
+                android:backgroundTint="#FF0033"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom Navigation Bar (5 Items: Home, Chat, Center Big Mic, Setting, Updates) -->
     <LinearLayout
         android:id="@+id/bottomDock"
         android:layout_width="match_parent"
@@ -280,9 +298,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🏠"
-                android:textSize="16sp" />
+                android:textSize="17sp" />
 
             <TextView
+                android:id="@+id/tvNavHomeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Home"
@@ -304,9 +323,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="💬"
-                android:textSize="16sp" />
+                android:textSize="17sp" />
 
             <TextView
+                android:id="@+id/tvNavChatText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Chat"
@@ -314,7 +334,7 @@
                 android:textSize="10sp" />
         </LinearLayout>
 
-        <!-- 3. CENTER BIG ELEVATED RED MIC BUTTON (Video 1 Exact Style) -->
+        <!-- 3. CENTER BIG ELEVATED RED MIC BUTTON -->
         <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
@@ -322,8 +342,8 @@
 
             <ImageButton
                 android:id="@+id/btnMic"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
                 android:layout_gravity="center"
                 android:backgroundTint="#FF0033"
                 android:src="@drawable/ic_mic"
@@ -344,7 +364,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⚙️"
-                android:textSize="16sp" />
+                android:textSize="17sp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -367,7 +387,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="🔄"
-                android:textSize="16sp" />
+                android:textSize="17sp" />
 
             <TextView
                 android:layout_width="wrap_content"
