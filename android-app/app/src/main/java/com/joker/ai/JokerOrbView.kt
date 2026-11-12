@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.*
+import kotlin.random.Random
 
 enum class OrbState {
     IDLE,
@@ -21,37 +22,36 @@ class JokerOrbView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    // 1700 Dense Micro-Particles (Video 1 smooth density)
-    private val pointCount = 1700
-    private val basePoints = ArrayList<FloatArray>(pointCount)
+    // 900 Particles (Exact aapke code jaisa)
+    private val particleCount = 900
+    private val particles = ArrayList<FloatArray>(particleCount)
 
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
-    private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val pulsePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2.5f
     }
 
-    private var angleX = 0f
-    private var angleY = 0f
-    private var time = 0f
-
+    private var phase = 0f
     var currentState: OrbState = OrbState.IDLE
 
     init {
-        // Fibonacci Spiral Algorithm for a pure spherical surface
-        val phi = Math.PI * (3.0 - sqrt(5.0))
-        for (i in 0 until pointCount) {
-            val y = 1.0 - (i.toDouble() / (pointCount - 1)) * 2.0
-            val radiusAtY = sqrt(max(0.0, 1.0 - y * y))
+        val random = Random(42)
+        val phi = Math.PI * (1.0 + sqrt(5.0))
+        for (i in 0 until particleCount) {
+            val y = 1.0 - 2.0 * (i + 0.5) / particleCount
+            val radius = sqrt(max(0.0, 1.0 - y * y))
             val theta = phi * i
 
-            val x = cos(theta) * radiusAtY
-            val z = sin(theta) * radiusAtY
+            val x = (cos(theta) * radius).toFloat()
+            val z = (sin(theta) * radius).toFloat()
+            val size = 0.7f + random.nextFloat() * 1.2f
+            val twinkle = random.nextFloat()
 
-            basePoints.add(floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat()))
+            particles.add(floatArrayOf(x, y.toFloat(), z, size, twinkle))
         }
     }
 
@@ -60,86 +60,81 @@ class JokerOrbView @JvmOverloads constructor(
 
         val centerX = width / 2f
         val centerY = height / 2f
-        
-        // Dynamic size: Keeps the orb large and majestic
-        val baseRadius = min(centerX, centerY) * 0.78f
+        val orbRadius = min(centerX, centerY) * 0.76f
 
-        // SLOW, CINEMATIC, SMOOTH SPEEDS (Video 1 exact motion)
-        val (speedY, waveSpeed, waveIntensity, breatheAmp) = when (currentState) {
-            OrbState.IDLE -> arrayOf(0.0035f, 0.025f, 0.045f, 0.03f)
-            OrbState.LISTENING -> arrayOf(0.006f, 0.06f, 0.07f, 0.09f) // Subtle expansion
-            OrbState.THINKING -> arrayOf(0.010f, 0.05f, 0.06f, 0.05f)
-            OrbState.SPEAKING -> arrayOf(0.005f, 0.08f, 0.085f, 0.07f) // Acoustic wave shimmer (stays round!)
+        // Exact Behaviour: Chup rehne par STILL (motion = 0)
+        val isMoving = (currentState == OrbState.LISTENING || 
+                        currentState == OrbState.SPEAKING || 
+                        currentState == OrbState.THINKING)
+
+        val motion = if (isMoving) 1f else 0f
+
+        // Bolne par hi phase aage badhega, silence mein freeze ho jayega
+        if (isMoving) {
+            val speed = when (currentState) {
+                OrbState.SPEAKING -> 0.045f
+                OrbState.LISTENING -> 0.035f
+                OrbState.THINKING -> 0.055f
+                else -> 0f
+            }
+            phase += speed
         }
 
-        angleY += speedY as Float
-        angleX += (speedY * 0.3f)
-        time += waveSpeed as Float
+        val rotation = phase
+        val pulse = if (isMoving) 1f + 0.035f * sin(phase * 2.2f) * motion else 1f
 
-        val cosX = cos(angleX)
-        val sinX = sin(angleX)
-        val cosY = cos(angleY)
-        val sinY = sin(angleY)
+        val cosR = cos(rotation)
+        val sinR = sin(rotation)
 
-        val intensity = waveIntensity as Float
-        val breathe = sin(time * 0.8f) * (breatheAmp as Float)
-        val effectiveBaseRadius = baseRadius * (1f + breathe)
+        // 900 Particles render
+        for (p in particles) {
+            val x = p[0]
+            val y = p[1]
+            val z = p[2]
+            val pSize = p[3]
+            val twinkle = p[4]
 
-        // Outer Glowing Red Halo Ring (Video 1 circular border)
-        val haloColor = when (currentState) {
-            OrbState.LISTENING -> Color.parseColor("#00FF66")
-            OrbState.THINKING -> Color.parseColor("#FF9900")
-            else -> Color.parseColor("#FF0033")
-        }
-        haloPaint.color = Color.argb(45, Color.red(haloColor), Color.green(haloColor), Color.blue(haloColor))
-        canvas.drawCircle(centerX, centerY, effectiveBaseRadius * 1.10f, haloPaint)
+            val ripple = if (isMoving) {
+                sin(phase * 2.0f + twinkle * 6.28f) * 0.035f * motion
+            } else 0f
 
-        // Red Cyberpunk Palette
-        val (baseR, baseG, baseB) = when (currentState) {
-            OrbState.LISTENING -> arrayOf(0, 255, 102)
-            OrbState.THINKING -> arrayOf(255, 153, 0)
-            else -> arrayOf(255, 20, 50) // Vibrant Red Theme
-        }
+            val x0 = x * (1f + ripple)
+            val z0 = z * (1f + ripple)
 
-        // Render each 3D particle: Stays strictly round with subtle liquid shimmers
-        for (i in 0 until pointCount) {
-            val bp = basePoints[i]
-            val bx = bp[0]
-            val by = bp[1]
-            val bz = bp[2]
+            val rotatedX = x0 * cosR - z0 * sinR
+            val rotatedZ = x0 * sinR + z0 * cosR
 
-            // Video 1 Gentle Surface Ripple (Caps distortion to keep round sphere intact)
-            val ripple = sin(bx * 3.5f + time) * cos(by * 3.5f - time * 0.7f) * 0.6f +
-                         sin(bz * 4.0f + time * 1.2f) * 0.4f
-            val currentR = effectiveBaseRadius * (1f + ripple * intensity)
+            // 3D Perspective
+            val perspective = 1f / (1f + rotatedZ * 0.22f)
+            val px = centerX + rotatedX * orbRadius * pulse * perspective
+            val py = centerY + y * orbRadius * pulse * perspective
 
-            // 3D Rotation Matrix
-            val x1 = bx * cosY + bz * sinY
-            val z1 = -bx * sinY + bz * cosY
+            val frontness = max(0f, min(1f, (rotatedZ + 1f) / 2f))
+            val glow = if (isMoving) {
+                max(0.35f, min(1f, 0.55f + frontness * 0.35f + motion * 0.35f))
+            } else {
+                0.72f + frontness * 0.22f
+            }
 
-            val y2 = by * cosX - z1 * sinX
-            val z2 = by * sinX + z1 * cosX
-
-            // Perspective Projection
-            val perspective = (z2 + 2.4f) / 3.4f
-            val screenX = centerX + x1 * currentR * perspective
-            val screenY = centerY + y2 * currentR * perspective
-
-            // Depth Shading: Front particles shine brighter and larger
-            val depthRatio = max(0f, min(1f, (z2 + 1f) / 2f))
-            val alpha = (40 + (depthRatio * 215)).toInt()
-            val dotRadius = max(1.0f, 0.9f + depthRatio * 2.3f)
-
-            // White-hot core highlights on the front face
-            val finalR = min(255, (baseR + (255 - baseR) * depthRatio * 0.7f).toInt())
-            val finalG = min(255, (baseG + (255 - baseG) * depthRatio * 0.85f).toInt())
-            val finalB = min(255, (baseB + (255 - baseB) * depthRatio * 0.85f).toInt())
+            // RED THEME: Deep Red with White-Hot Highlights in front
+            val finalR = min(255, ((0.95f + frontness * 0.05f) * glow * 255).toInt())
+            val finalG = min(255, ((0.08f + frontness * 0.32f) * glow * 255).toInt())
+            val finalB = min(255, ((0.15f + frontness * 0.32f) * glow * 255).toInt())
+            val alpha = min(255, ((0.35f + frontness * 0.65f) * 255).toInt())
 
             dotPaint.color = Color.argb(alpha, finalR, finalG, finalB)
-            canvas.drawCircle(screenX, screenY, dotRadius, dotPaint)
+            val dotRadius = pSize * (0.75f + frontness * 0.55f) * (if (isMoving) 1f + motion * 0.7f else 1f)
+
+            canvas.drawCircle(px, py, dotRadius, dotPaint)
         }
 
-        // Buttery-smooth rendering
+        // Outer Red Pulse Ring (Bolte waqt chalegi)
+        if (isMoving) {
+            pulsePaint.color = Color.argb((40 + motion * 40).toInt(), 255, 0, 51)
+            canvas.drawCircle(centerX, centerY, orbRadius * pulse * 1.08f, pulsePaint)
+        }
+
+        // Always running loop
         postInvalidateOnAnimation()
     }
 
