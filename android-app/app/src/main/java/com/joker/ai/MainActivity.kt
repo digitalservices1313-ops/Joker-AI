@@ -169,24 +169,11 @@ class MainActivity : AppCompatActivity() {
 
         navUpdates.setOnClickListener { showUpdatesDialog() }
 
-        // ==========================================================
-        // 1. SCREEN PILL -> DIRECT REAL GOOGLE LENS LAUNCHER
-        // ==========================================================
-        btnScreen.setOnClickListener {
-            openRealGoogleLens()
-        }
+        // Action Pills
+        btnScreen.setOnClickListener { openRealGoogleLens() }
+        btnMemory.setOnClickListener { showMemoryManagerDialog() }
+        btnLanguage.setOnClickListener { showLanguageDialog() }
 
-        // 2. MEMORIES PILL
-        btnMemory.setOnClickListener {
-            showMemoryManagerDialog()
-        }
-
-        // 3. LANGUAGE PILL
-        btnLanguage.setOnClickListener {
-            showLanguageDialog()
-        }
-
-        // Send Message
         sendBtn.setOnClickListener {
             val userText = input.text.toString().trim()
             if (userText.isNotEmpty()) {
@@ -194,12 +181,13 @@ class MainActivity : AppCompatActivity() {
                 processMessage(userText)
             }
         }
+
+        // Initially Orb is completely STILL
+        setOrbIdle()
     }
 
-    // Direct Google Lens App Launcher (No Website!)
     private fun openRealGoogleLens() {
         try {
-            // 1. Standalone Google Lens App check
             val lensIntent = packageManager.getLaunchIntentForPackage("com.google.ar.lens")
             if (lensIntent != null) {
                 lensIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -207,7 +195,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            // 2. Google Search App Built-in Lens Activity (Har phone me hoti hai)
             val googleAppLensIntent = Intent().apply {
                 setClassName("com.google.android.googlequicksearchbox", "com.google.android.apps.search.lens.LensActivity")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -215,22 +202,12 @@ class MainActivity : AppCompatActivity() {
             startActivity(googleAppLensIntent)
         } catch (e: Exception) {
             try {
-                // 3. Generic Lens Action Intent
                 val altIntent = Intent("com.google.ar.lens.LENS_ACTIVITY").apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 startActivity(altIntent)
             } catch (e2: Exception) {
-                // 4. Play store fallback if not installed
-                Toast.makeText(this, "Google Lens phone mein nahi mila, Play Store khol rahe hain...", Toast.LENGTH_SHORT).show()
-                try {
-                    val playStoreIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.ar.lens")).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    startActivity(playStoreIntent)
-                } catch (e3: Exception) {
-                    Toast.makeText(this, "Google Lens open nahi ho paaya", Toast.LENGTH_SHORT).show()
-                }
+                Toast.makeText(this, "Google Lens phone mein nahi mila", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -313,19 +290,16 @@ class MainActivity : AppCompatActivity() {
                         currentLanguage = "hi_IN"
                         tts?.language = Locale("hi", "IN")
                         Toast.makeText(this, "Language: Hinglish Active", Toast.LENGTH_SHORT).show()
-                        tts?.speak("Hinglish language active hai, Boss!", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
                     }
                     1 -> {
                         currentLanguage = "hi"
                         tts?.language = Locale("hi")
                         Toast.makeText(this, "Language: हिंदी सक्रिय", Toast.LENGTH_SHORT).show()
-                        tts?.speak("हिंदी भाषा सक्रिय कर दी गई है।", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
                     }
                     2 -> {
                         currentLanguage = "en"
                         tts?.language = Locale.US
                         Toast.makeText(this, "Language: English Active", Toast.LENGTH_SHORT).show()
-                        tts?.speak("English voice synthesis activated, Boss!", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
                     }
                 }
             }
@@ -335,7 +309,7 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
             .setTitle("🚀 Joker AI System Updates")
-            .setMessage("Version: 3.2.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Direct Google Lens Scanner Integration\n• Video 1 3D Fluid Red Particle Orb\n• Dedicated Clean Home & Chat Tabs\n• Neural Memory Vault Active\n• Voice Language Switcher\n• Autonomous App Actions")
+            .setMessage("Version: 3.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Voice-Reactive Freeze/Pulse 3D Orb\n• Direct Google Lens App Scanner\n• Neural Memory Vault\n• Voice Language Switcher\n• Autonomous App Actions")
             .setPositiveButton("Awesome", null)
             .show()
     }
@@ -349,6 +323,7 @@ class MainActivity : AppCompatActivity() {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         runOnUiThread {
+                            // Bolte waqt Orb ghoomega aur pulse karega
                             jokerOrb.setState(OrbState.SPEAKING)
                             tvOrbStatus.text = "● SPEAKING... // VOCAL FEED"
                         }
@@ -366,6 +341,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Shanti hone par Orb turant STILL ho jayega
     private fun setOrbIdle() {
         jokerOrb.setState(OrbState.IDLE)
         tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
@@ -380,6 +356,7 @@ class MainActivity : AppCompatActivity() {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
                         micBtn.setColorFilter(Color.parseColor("#00FF66"))
+                        // User bolna shuru karega toh Orb move hoga
                         jokerOrb.setState(OrbState.LISTENING)
                         tvOrbStatus.text = "● LISTENING... // AUDIO FEED ACTIVE"
                     }
@@ -396,7 +373,8 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onError(error: Int) {
-                        resetMicUI()
+                        isListening = false
+                        micBtn.clearColorFilter()
                         if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
                             setOrbIdle()
                             Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
@@ -406,7 +384,8 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResults(results: Bundle?) {
-                        resetMicUI()
+                        isListening = false
+                        micBtn.clearColorFilter()
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val spokenText = matches?.firstOrNull()
                         if (!spokenText.isNullOrEmpty()) {
@@ -425,15 +404,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun resetMicUI() {
-        isListening = false
-        micBtn.clearColorFilter()
-    }
-
     private fun startInAppListening() {
         if (isListening) {
             speechRecognizer?.stopListening()
-            resetMicUI()
+            isListening = false
             setOrbIdle()
             return
         }
@@ -462,7 +436,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startFallbackVoiceInput() {
-        resetMicUI()
+        isListening = false
+        micBtn.clearColorFilter()
         jokerOrb.setState(OrbState.LISTENING)
         tvOrbStatus.text = "● LISTENING... // AUDIO IN"
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -502,6 +477,7 @@ class MainActivity : AppCompatActivity() {
                     chatLog.append("🃏 Joker AI: ${response.reply}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
 
+                    // TTS starts -> Orb moves and pulses with speech
                     tts?.speak(response.reply, TextToSpeech.QUEUE_FLUSH, null, "JokerResponse")
 
                     val finalAction = detectAction(response.action, userText)
@@ -606,5 +582,4 @@ class MainActivity : AppCompatActivity() {
         tts?.shutdown()
         super.onDestroy()
     }
-
-}    
+} 
