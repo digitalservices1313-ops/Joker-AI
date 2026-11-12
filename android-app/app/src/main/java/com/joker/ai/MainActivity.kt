@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     private var tts: TextToSpeech? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
-    private var currentLanguage = "hi_IN" // Default Hinglish/Hindi
+    private var currentLanguage = "hi_IN"
 
     private lateinit var layoutHome: View
     private lateinit var layoutChat: View
@@ -170,40 +170,18 @@ class MainActivity : AppCompatActivity() {
         navUpdates.setOnClickListener { showUpdatesDialog() }
 
         // ==========================================================
-        // OPTION 3: FUNCTIONAL ACTION PILLS
+        // 1. SCREEN PILL -> DIRECT REAL GOOGLE LENS LAUNCHER
         // ==========================================================
-
-        // 1. SCREEN PILL (Vision & Scanner Hub)
         btnScreen.setOnClickListener {
-            val options = arrayOf("📷 Camera Vision (Scan Object / Text)", "🔍 Google Lens Search")
-            AlertDialog.Builder(this)
-                .setTitle("📱 Screen & Vision Hub")
-                .setItems(options) { _, which ->
-                    when (which) {
-                        0 -> {
-                            val cameraIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            startActivity(cameraIntent)
-                        }
-                        1 -> {
-                            val lensIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://lens.google.com/")).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            startActivity(lensIntent)
-                        }
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+            openRealGoogleLens()
         }
 
-        // 2. MEMORIES PILL (AI Long-Term Memory Manager)
+        // 2. MEMORIES PILL
         btnMemory.setOnClickListener {
             showMemoryManagerDialog()
         }
 
-        // 3. LANGUAGE PILL (Voice & Speech Selector)
+        // 3. LANGUAGE PILL
         btnLanguage.setOnClickListener {
             showLanguageDialog()
         }
@@ -214,6 +192,45 @@ class MainActivity : AppCompatActivity() {
             if (userText.isNotEmpty()) {
                 input.text.clear()
                 processMessage(userText)
+            }
+        }
+    }
+
+    // Direct Google Lens App Launcher (No Website!)
+    private fun openRealGoogleLens() {
+        try {
+            // 1. Standalone Google Lens App check
+            val lensIntent = packageManager.getLaunchIntentForPackage("com.google.ar.lens")
+            if (lensIntent != null) {
+                lensIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(lensIntent)
+                return
+            }
+
+            // 2. Google Search App Built-in Lens Activity (Har phone me hoti hai)
+            val googleAppLensIntent = Intent().apply {
+                setClassName("com.google.android.googlequicksearchbox", "com.google.android.apps.search.lens.LensActivity")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(googleAppLensIntent)
+        } catch (e: Exception) {
+            try {
+                // 3. Generic Lens Action Intent
+                val altIntent = Intent("com.google.ar.lens.LENS_ACTIVITY").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(altIntent)
+            } catch (e2: Exception) {
+                // 4. Play store fallback if not installed
+                Toast.makeText(this, "Google Lens phone mein nahi mila, Play Store khol rahe hain...", Toast.LENGTH_SHORT).show()
+                try {
+                    val playStoreIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.ar.lens")).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(playStoreIntent)
+                } catch (e3: Exception) {
+                    Toast.makeText(this, "Google Lens open nahi ho paaya", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -243,9 +260,6 @@ class MainActivity : AppCompatActivity() {
         tvGreeting.text = greet
     }
 
-    // ==========================================
-    // MEMORY VAULT FUNCTIONS
-    // ==========================================
     private fun showMemoryManagerDialog() {
         val allMemories = sharedPrefs.all
         val memoryList = if (allMemories.isEmpty()) {
@@ -289,9 +303,6 @@ class MainActivity : AppCompatActivity() {
         return "User Memories: " + all.values.joinToString(", ")
     }
 
-    // ==========================================
-    // LANGUAGE DIALOG
-    // ==========================================
     private fun showLanguageDialog() {
         val languages = arrayOf("🇮🇳 Hinglish (Default Mix)", "🇮🇳 Hindi (हिंदी)", "🇬🇧 English (US)")
         AlertDialog.Builder(this)
@@ -324,7 +335,7 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
             .setTitle("🚀 Joker AI System Updates")
-            .setMessage("Version: 3.0.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Video 1 3D Fluid Red Particle Orb\n• Dedicated Clean Home & Chat Tabs\n• Neural Memory Vault Active\n• Screen & Vision Scanner Hub\n• Voice Language Switcher\n• Autonomous App Actions")
+            .setMessage("Version: 3.2.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Direct Google Lens Scanner Integration\n• Video 1 3D Fluid Red Particle Orb\n• Dedicated Clean Home & Chat Tabs\n• Neural Memory Vault Active\n• Voice Language Switcher\n• Autonomous App Actions")
             .setPositiveButton("Awesome", null)
             .show()
     }
@@ -355,7 +366,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-     private fun setOrbIdle() {
+    private fun setOrbIdle() {
         jokerOrb.setState(OrbState.IDLE)
         tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
         micBtn.clearColorFilter()
@@ -474,7 +485,6 @@ class MainActivity : AppCompatActivity() {
         jokerOrb.setState(OrbState.THINKING)
         tvOrbStatus.text = "● THINKING... // NEURAL PROCESSING"
 
-        // Inject stored neural memories into prompt context
         val memoryContext = getMemoryContext()
         val finalPrompt = if (memoryContext.isNotEmpty()) {
             "[$memoryContext] $userText"
@@ -523,6 +533,7 @@ class MainActivity : AppCompatActivity() {
             lower.contains("youtube") -> "OPEN_YOUTUBE"
             lower.contains("whatsapp") -> "OPEN_WHATSAPP"
             lower.contains("camera") -> "OPEN_CAMERA"
+            lower.contains("lens") -> "OPEN_LENS"
             lower.contains("setting") -> "OPEN_SETTINGS"
             lower.contains("search") || lower.contains("khojo") || lower.contains("google") -> "WEB_SEARCH"
             else -> "NONE"
@@ -568,6 +579,9 @@ class MainActivity : AppCompatActivity() {
                         cameraIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         startActivity(cameraIntent)
                     }
+                    "OPEN_LENS" -> {
+                        openRealGoogleLens()
+                    }
                     "OPEN_SETTINGS" -> {
                         val settingsIntent = Intent(Settings.ACTION_SETTINGS)
                         settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -593,4 +607,4 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-}
+}    
