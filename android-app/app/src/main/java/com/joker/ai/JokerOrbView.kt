@@ -21,17 +21,17 @@ class JokerOrbView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    // 1600 Dense Organic Particles (Video 1 density)
-    private val pointCount = 1600
+    // 1700 Dense Micro-Particles (Video 1 smooth density)
+    private val pointCount = 1700
     private val basePoints = ArrayList<FloatArray>(pointCount)
 
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
-    private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2f
+        strokeWidth = 2.5f
     }
 
     private var angleX = 0f
@@ -41,7 +41,7 @@ class JokerOrbView @JvmOverloads constructor(
     var currentState: OrbState = OrbState.IDLE
 
     init {
-        // Fibonacci Spiral Algorithm for organic spherical particle cloud
+        // Fibonacci Spiral Algorithm for a pure spherical surface
         val phi = Math.PI * (3.0 - sqrt(5.0))
         for (i in 0 until pointCount) {
             val y = 1.0 - (i.toDouble() / (pointCount - 1)) * 2.0
@@ -60,18 +60,20 @@ class JokerOrbView @JvmOverloads constructor(
 
         val centerX = width / 2f
         val centerY = height / 2f
-        val baseRadius = min(centerX, centerY) * 0.72f
+        
+        // Dynamic size: Keeps the orb large and majestic
+        val baseRadius = min(centerX, centerY) * 0.78f
 
-        // Video 1 Wave Dynamics & Fluid Speeds
-        val (speedY, waveFreq, waveSpeed, waveIntensity) = when (currentState) {
-            OrbState.IDLE -> arrayOf(0.007f, 2.8f, 0.04f, 0.18f)
-            OrbState.LISTENING -> arrayOf(0.022f, 4.2f, 0.09f, 0.32f) // Reactive expansion
-            OrbState.THINKING -> arrayOf(0.035f, 5.5f, 0.07f, 0.22f)  // Energetic swirl
-            OrbState.SPEAKING -> arrayOf(0.016f, 3.8f, 0.15f, 0.38f)  // Audio reactive waves
+        // SLOW, CINEMATIC, SMOOTH SPEEDS (Video 1 exact motion)
+        val (speedY, waveSpeed, waveIntensity, breatheAmp) = when (currentState) {
+            OrbState.IDLE -> arrayOf(0.0035f, 0.025f, 0.045f, 0.03f)
+            OrbState.LISTENING -> arrayOf(0.006f, 0.06f, 0.07f, 0.09f) // Subtle expansion
+            OrbState.THINKING -> arrayOf(0.010f, 0.05f, 0.06f, 0.05f)
+            OrbState.SPEAKING -> arrayOf(0.005f, 0.08f, 0.085f, 0.07f) // Acoustic wave shimmer (stays round!)
         }
 
         angleY += speedY as Float
-        angleX += (speedY * 0.35f)
+        angleX += (speedY * 0.3f)
         time += waveSpeed as Float
 
         val cosX = cos(angleX)
@@ -79,44 +81,39 @@ class JokerOrbView @JvmOverloads constructor(
         val cosY = cos(angleY)
         val sinY = sin(angleY)
 
-        val freq = waveFreq as Float
         val intensity = waveIntensity as Float
+        val breathe = sin(time * 0.8f) * (breatheAmp as Float)
+        val effectiveBaseRadius = baseRadius * (1f + breathe)
 
-        // Outer Ethereal Glowing Aura Ring (Video 1 background ring)
-        val auraColor = when (currentState) {
+        // Outer Glowing Red Halo Ring (Video 1 circular border)
+        val haloColor = when (currentState) {
             OrbState.LISTENING -> Color.parseColor("#00FF66")
             OrbState.THINKING -> Color.parseColor("#FF9900")
-            else -> Color.parseColor("#FF0033") // Red Theme
+            else -> Color.parseColor("#FF0033")
         }
-
-        auraPaint.color = Color.argb(35, Color.red(auraColor), Color.green(auraColor), Color.blue(auraColor))
-        canvas.drawCircle(centerX, centerY, baseRadius * 1.15f, auraPaint)
-        auraPaint.color = Color.argb(18, Color.red(auraColor), Color.green(auraColor), Color.blue(auraColor))
-        canvas.drawCircle(centerX, centerY, baseRadius * 1.25f, auraPaint)
+        haloPaint.color = Color.argb(45, Color.red(haloColor), Color.green(haloColor), Color.blue(haloColor))
+        canvas.drawCircle(centerX, centerY, effectiveBaseRadius * 1.10f, haloPaint)
 
         // Red Cyberpunk Palette
         val (baseR, baseG, baseB) = when (currentState) {
-            OrbState.LISTENING -> arrayOf(0, 255, 102) // Green while listening
-            OrbState.THINKING -> arrayOf(255, 153, 0)   // Orange while thinking
-            else -> arrayOf(255, 20, 50)               // Signature Red Theme
+            OrbState.LISTENING -> arrayOf(0, 255, 102)
+            OrbState.THINKING -> arrayOf(255, 153, 0)
+            else -> arrayOf(255, 20, 50) // Vibrant Red Theme
         }
 
-        // Render each particle with 3D multi-octave fluid wave displacement
+        // Render each 3D particle: Stays strictly round with subtle liquid shimmers
         for (i in 0 until pointCount) {
             val bp = basePoints[i]
             val bx = bp[0]
             val by = bp[1]
             val bz = bp[2]
 
-            // Video 1 Wave Equation: Multi-frequency surface turbulence
-            val wave1 = sin(bx * freq + time) * cos(by * freq - time * 0.7f)
-            val wave2 = sin(bz * (freq * 1.3f) + time * 1.2f) * 0.5f
-            val wave3 = cos((bx + by) * 2f - time * 1.5f) * 0.3f
-            val totalWave = (wave1 + wave2 + wave3)
+            // Video 1 Gentle Surface Ripple (Caps distortion to keep round sphere intact)
+            val ripple = sin(bx * 3.5f + time) * cos(by * 3.5f - time * 0.7f) * 0.6f +
+                         sin(bz * 4.0f + time * 1.2f) * 0.4f
+            val currentR = effectiveBaseRadius * (1f + ripple * intensity)
 
-            val currentR = baseRadius * (1f + totalWave * intensity)
-
-            // 3D Matrix Rotation (Y then X)
+            // 3D Rotation Matrix
             val x1 = bx * cosY + bz * sinY
             val z1 = -bx * sinY + bz * cosY
 
@@ -128,12 +125,12 @@ class JokerOrbView @JvmOverloads constructor(
             val screenX = centerX + x1 * currentR * perspective
             val screenY = centerY + y2 * currentR * perspective
 
-            // Depth Lighting: Front particles glow bright white-hot red
+            // Depth Shading: Front particles shine brighter and larger
             val depthRatio = max(0f, min(1f, (z2 + 1f) / 2f))
-            val alpha = (35 + (depthRatio * 220)).toInt()
-            val dotRadius = max(1.0f, 0.8f + depthRatio * 2.6f)
+            val alpha = (40 + (depthRatio * 215)).toInt()
+            val dotRadius = max(1.0f, 0.9f + depthRatio * 2.3f)
 
-            // Core highlights turn brilliant white in the foreground
+            // White-hot core highlights on the front face
             val finalR = min(255, (baseR + (255 - baseR) * depthRatio * 0.7f).toInt())
             val finalG = min(255, (baseG + (255 - baseG) * depthRatio * 0.85f).toInt())
             val finalB = min(255, (baseB + (255 - baseB) * depthRatio * 0.85f).toInt())
@@ -142,7 +139,7 @@ class JokerOrbView @JvmOverloads constructor(
             canvas.drawCircle(screenX, screenY, dotRadius, dotPaint)
         }
 
-        // 60-120 FPS continuous loop
+        // Buttery-smooth rendering
         postInvalidateOnAnimation()
     }
 
