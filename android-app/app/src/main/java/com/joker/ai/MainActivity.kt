@@ -1,7 +1,9 @@
 package com.joker.ai
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
@@ -72,6 +74,7 @@ class MainActivity : AppCompatActivity() {
     private var tts: TextToSpeech? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
+    private var currentLanguage = "hi_IN" // Default Hinglish/Hindi
 
     private lateinit var layoutHome: View
     private lateinit var layoutChat: View
@@ -84,6 +87,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var chatLog: TextView
     private lateinit var scrollView: ScrollView
     private lateinit var micBtn: ImageButton
+    private lateinit var sharedPrefs: SharedPreferences
 
     private val audioPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
@@ -109,7 +113,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Views Initialization
+        sharedPrefs = getSharedPreferences("JokerMemoryVault", Context.MODE_PRIVATE)
+
         layoutHome = findViewById(R.id.layoutHome)
         layoutChat = findViewById(R.id.layoutChat)
         tvNavHomeText = findViewById(R.id.tvNavHomeText)
@@ -134,26 +139,14 @@ class MainActivity : AppCompatActivity() {
         val btnMemory = findViewById<View>(R.id.btnMemory)
         val btnLanguage = findViewById<View>(R.id.btnLanguage)
 
-        // Dynamic Time Greeting
         updateGreeting()
-
-        // Setup TTS with Voice Reactive Orb
         setupTTS()
-
-        // Setup Speech Recognizer
         setupSpeechRecognizer()
 
-        // 1. Home Tab Click
-        navHome.setOnClickListener {
-            switchToHomeTab()
-        }
+        // Tab Navigation
+        navHome.setOnClickListener { switchToHomeTab() }
+        navChat.setOnClickListener { switchToChatTab() }
 
-        // 2. Chat Tab Click
-        navChat.setOnClickListener {
-            switchToChatTab()
-        }
-
-        // 3. Center Mic Click (Home par aakar aawaz sunega)
         micBtn.setOnClickListener {
             switchToHomeTab()
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -163,7 +156,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 4. Settings Click (Opens System Settings)
         navSettings.setOnClickListener {
             try {
                 val intent = Intent(Settings.ACTION_SETTINGS).apply {
@@ -171,27 +163,52 @@ class MainActivity : AppCompatActivity() {
                 }
                 startActivity(intent)
             } catch (e: Exception) {
-                Toast.makeText(this, "Settings open nahi ho paaya", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Settings open error", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // 5. Updates Click (Shows System Update Dialog)
-        navUpdates.setOnClickListener {
-            showUpdatesDialog()
-        }
+        navUpdates.setOnClickListener { showUpdatesDialog() }
 
-        // Quick Action Pills
+        // ==========================================================
+        // OPTION 3: FUNCTIONAL ACTION PILLS
+        // ==========================================================
+
+        // 1. SCREEN PILL (Vision & Scanner Hub)
         btnScreen.setOnClickListener {
-            Toast.makeText(this, "📱 Screen Intelligence: Active", Toast.LENGTH_SHORT).show()
-        }
-        btnMemory.setOnClickListener {
-            Toast.makeText(this, "🧠 Neural Memory: 100% Operational", Toast.LENGTH_SHORT).show()
-        }
-        btnLanguage.setOnClickListener {
-            Toast.makeText(this, "🌐 Language: Hindi / English Auto-Detect", Toast.LENGTH_SHORT).show()
+            val options = arrayOf("📷 Camera Vision (Scan Object / Text)", "🔍 Google Lens Search")
+            AlertDialog.Builder(this)
+                .setTitle("📱 Screen & Vision Hub")
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> {
+                            val cameraIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(cameraIntent)
+                        }
+                        1 -> {
+                            val lensIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://lens.google.com/")).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(lensIntent)
+                        }
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
 
-        // Send Button Click
+        // 2. MEMORIES PILL (AI Long-Term Memory Manager)
+        btnMemory.setOnClickListener {
+            showMemoryManagerDialog()
+        }
+
+        // 3. LANGUAGE PILL (Voice & Speech Selector)
+        btnLanguage.setOnClickListener {
+            showLanguageDialog()
+        }
+
+        // Send Message
         sendBtn.setOnClickListener {
             val userText = input.text.toString().trim()
             if (userText.isNotEmpty()) {
@@ -226,10 +243,88 @@ class MainActivity : AppCompatActivity() {
         tvGreeting.text = greet
     }
 
+    // ==========================================
+    // MEMORY VAULT FUNCTIONS
+    // ==========================================
+    private fun showMemoryManagerDialog() {
+        val allMemories = sharedPrefs.all
+        val memoryList = if (allMemories.isEmpty()) {
+            "No memories saved yet.\nAdd something you want Joker to remember!"
+        } else {
+            allMemories.entries.joinToString("\n\n") { "• ${it.value}" }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("🧠 Joker Neural Memory Vault")
+            .setMessage(memoryList)
+            .setPositiveButton("➕ Add Memory") { _, _ ->
+                val input = EditText(this).apply {
+                    hint = "e.g. My car is Red or I love Biryani"
+                    setTextColor(Color.BLACK)
+                }
+                AlertDialog.Builder(this)
+                    .setTitle("Remember a Fact")
+                    .setView(input)
+                    .setPositiveButton("Save") { _, _ ->
+                        val fact = input.text.toString().trim()
+                        if (fact.isNotEmpty()) {
+                            sharedPrefs.edit().putString("mem_${System.currentTimeMillis()}", fact).apply()
+                            Toast.makeText(this, "Memory Saved into Neural Core!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+            .setNeutralButton("🗑️ Clear All") { _, _ ->
+                sharedPrefs.edit().clear().apply()
+                Toast.makeText(this, "All memories wiped!", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun getMemoryContext(): String {
+        val all = sharedPrefs.all
+        if (all.isEmpty()) return ""
+        return "User Memories: " + all.values.joinToString(", ")
+    }
+
+    // ==========================================
+    // LANGUAGE DIALOG
+    // ==========================================
+    private fun showLanguageDialog() {
+        val languages = arrayOf("🇮🇳 Hinglish (Default Mix)", "🇮🇳 Hindi (हिंदी)", "🇬🇧 English (US)")
+        AlertDialog.Builder(this)
+            .setTitle("🌐 Select Voice Language")
+            .setItems(languages) { _, which ->
+                when (which) {
+                    0 -> {
+                        currentLanguage = "hi_IN"
+                        tts?.language = Locale("hi", "IN")
+                        Toast.makeText(this, "Language: Hinglish Active", Toast.LENGTH_SHORT).show()
+                        tts?.speak("Hinglish language active hai, Boss!", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
+                    }
+                    1 -> {
+                        currentLanguage = "hi"
+                        tts?.language = Locale("hi")
+                        Toast.makeText(this, "Language: हिंदी सक्रिय", Toast.LENGTH_SHORT).show()
+                        tts?.speak("हिंदी भाषा सक्रिय कर दी गई है।", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
+                    }
+                    2 -> {
+                        currentLanguage = "en"
+                        tts?.language = Locale.US
+                        Toast.makeText(this, "Language: English Active", Toast.LENGTH_SHORT).show()
+                        tts?.speak("English voice synthesis activated, Boss!", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
+                    }
+                }
+            }
+            .show()
+    }
+
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
             .setTitle("🚀 Joker AI System Updates")
-            .setMessage("Version: 2.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nChangelog:\n• Video 1 3D Fluid Red Particle Orb\n• Dedicated Clean Home & Chat Tabs\n• Center Elevated Voice Controller\n• Direct Phone Settings Launcher\n• Autonomous App Actions Enabled")
+            .setMessage("Version: 3.0.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Video 1 3D Fluid Red Particle Orb\n• Dedicated Clean Home & Chat Tabs\n• Neural Memory Vault Active\n• Screen & Vision Scanner Hub\n• Voice Language Switcher\n• Autonomous App Actions")
             .setPositiveButton("Awesome", null)
             .show()
     }
@@ -237,14 +332,14 @@ class MainActivity : AppCompatActivity() {
     private fun setupTTS() {
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.getDefault()
+                tts?.language = Locale("hi", "IN")
                 tts?.setSpeechRate(1.05f)
 
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         runOnUiThread {
                             jokerOrb.setState(OrbState.SPEAKING)
-                            tvOrbStatus.text = "SPEAKING... // AUDIO OUT"
+                            tvOrbStatus.text = "● SPEAKING... // VOCAL FEED"
                         }
                     }
 
@@ -260,7 +355,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setOrbIdle() {
+     private fun setOrbIdle() {
         jokerOrb.setState(OrbState.IDLE)
         tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
         micBtn.clearColorFilter()
@@ -290,8 +385,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onError(error: Int) {
-                        isListening = false
-                        micBtn.clearColorFilter()
+                        resetMicUI()
                         if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
                             setOrbIdle()
                             Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
@@ -301,8 +395,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResults(results: Bundle?) {
-                        isListening = false
-                        micBtn.clearColorFilter()
+                        resetMicUI()
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val spokenText = matches?.firstOrNull()
                         if (!spokenText.isNullOrEmpty()) {
@@ -321,18 +414,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun resetMicUI() {
+        isListening = false
+        micBtn.clearColorFilter()
+    }
+
     private fun startInAppListening() {
         if (isListening) {
             speechRecognizer?.stopListening()
-            isListening = false
+            resetMicUI()
             setOrbIdle()
             return
+        }
+
+        val langLocale = when (currentLanguage) {
+            "hi" -> Locale("hi")
+            "en" -> Locale.US
+            else -> Locale.getDefault()
         }
 
         if (speechRecognizer != null) {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, langLocale)
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
             }
             isListening = true
@@ -347,8 +451,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startFallbackVoiceInput() {
-        isListening = false
-        micBtn.clearColorFilter()
+        resetMicUI()
         jokerOrb.setState(OrbState.LISTENING)
         tvOrbStatus.text = "● LISTENING... // AUDIO IN"
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -371,9 +474,17 @@ class MainActivity : AppCompatActivity() {
         jokerOrb.setState(OrbState.THINKING)
         tvOrbStatus.text = "● THINKING... // NEURAL PROCESSING"
 
+        // Inject stored neural memories into prompt context
+        val memoryContext = getMemoryContext()
+        val finalPrompt = if (memoryContext.isNotEmpty()) {
+            "[$memoryContext] $userText"
+        } else {
+            userText
+        }
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = api.sendMessage(ChatRequest(userText))
+                val response = api.sendMessage(ChatRequest(finalPrompt))
                 withContext(Dispatchers.Main) {
                     val currentText = chatLog.text.toString()
                     val cleanText = currentText.replace("🃏 Joker AI: Soch raha hoon... 💭\n", "")
@@ -481,4 +592,5 @@ class MainActivity : AppCompatActivity() {
         tts?.shutdown()
         super.onDestroy()
     }
+
 }
