@@ -21,22 +21,28 @@ class JokerOrbView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val pointCount = 450 // 450 3D particle dots
-    private val points = ArrayList<FloatArray>(pointCount)
+    // 1600 Dense Organic Particles (Video 1 density)
+    private val pointCount = 1600
+    private val basePoints = ArrayList<FloatArray>(pointCount)
 
     private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
 
+    private val auraPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+
     private var angleX = 0f
     private var angleY = 0f
-    private var pulsePhase = 0f
+    private var time = 0f
 
     var currentState: OrbState = OrbState.IDLE
 
     init {
-        // Fibonacci Sphere Algorithm for uniform particle distribution
-        val phi = Math.PI * (3.0 - sqrt(5.0)) // Golden angle
+        // Fibonacci Spiral Algorithm for organic spherical particle cloud
+        val phi = Math.PI * (3.0 - sqrt(5.0))
         for (i in 0 until pointCount) {
             val y = 1.0 - (i.toDouble() / (pointCount - 1)) * 2.0
             val radiusAtY = sqrt(max(0.0, 1.0 - y * y))
@@ -45,7 +51,7 @@ class JokerOrbView @JvmOverloads constructor(
             val x = cos(theta) * radiusAtY
             val z = sin(theta) * radiusAtY
 
-            points.add(floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat()))
+            basePoints.add(floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat()))
         }
     }
 
@@ -56,58 +62,87 @@ class JokerOrbView @JvmOverloads constructor(
         val centerY = height / 2f
         val baseRadius = min(centerX, centerY) * 0.72f
 
-        // State-based dynamic speeds and pulse
-        val (speedX, speedY, pulseSpeed, pulseAmplitude, baseColor) = when (currentState) {
-            OrbState.IDLE -> arrayOf(0.005f, 0.009f, 0.04f, 0.05f, Color.parseColor("#FF1E44"))
-            OrbState.LISTENING -> arrayOf(0.015f, 0.025f, 0.12f, 0.18f, Color.parseColor("#00FF66")) // Listening Green
-            OrbState.THINKING -> arrayOf(0.035f, 0.045f, 0.08f, 0.12f, Color.parseColor("#FF9900"))  // Thinking Orange
-            OrbState.SPEAKING -> arrayOf(0.012f, 0.018f, 0.18f, 0.22f, Color.parseColor("#FF1E44"))  // Energetic Red
+        // Video 1 Wave Dynamics & Fluid Speeds
+        val (speedY, waveFreq, waveSpeed, waveIntensity) = when (currentState) {
+            OrbState.IDLE -> arrayOf(0.007f, 2.8f, 0.04f, 0.18f)
+            OrbState.LISTENING -> arrayOf(0.022f, 4.2f, 0.09f, 0.32f) // Reactive expansion
+            OrbState.THINKING -> arrayOf(0.035f, 5.5f, 0.07f, 0.22f)  // Energetic swirl
+            OrbState.SPEAKING -> arrayOf(0.016f, 3.8f, 0.15f, 0.38f)  // Audio reactive waves
         }
 
-        angleX += speedX as Float
         angleY += speedY as Float
-        pulsePhase += pulseSpeed as Float
-
-        val dynamicRadius = baseRadius * (1f + sin(pulsePhase) * (pulseAmplitude as Float))
+        angleX += (speedY * 0.35f)
+        time += waveSpeed as Float
 
         val cosX = cos(angleX)
         val sinX = sin(angleX)
         val cosY = cos(angleY)
         val sinY = sin(angleY)
 
-        val col = baseColor as Int
-        val red = Color.red(col)
-        val green = Color.green(col)
-        val blue = Color.blue(col)
+        val freq = waveFreq as Float
+        val intensity = waveIntensity as Float
 
-        // Project 3D points to 2D Screen
-        for (p in points) {
-            val x = p[0]
-            val y = p[1]
-            val z = p[2]
-
-            // Rotate around Y-axis
-            val x1 = x * cosY + z * sinY
-            val z1 = -x * sinY + z * cosY
-
-            // Rotate around X-axis
-            val y2 = y * cosX - z1 * sinX
-            val z2 = y * sinX + z1 * cosX
-
-            // Perspective scale (z2 in [-1, 1])
-            val perspective = (z2 + 1.8f) / 2.8f
-            val screenX = centerX + x1 * dynamicRadius * perspective
-            val screenY = centerY + y2 * dynamicRadius * perspective
-
-            // Depth Shading: Front particles are larger and brighter
-            val alpha = (max(20f, min(255f, (z2 + 1.2f) * 110f))).toInt()
-            val dotSize = max(1.5f, (z2 + 1.2f) * 2.2f)
-
-            dotPaint.color = Color.argb(alpha, red, green, blue)
-            canvas.drawCircle(screenX, screenY, dotSize, dotPaint)
+        // Outer Ethereal Glowing Aura Ring (Video 1 background ring)
+        val auraColor = when (currentState) {
+            OrbState.LISTENING -> Color.parseColor("#00FF66")
+            OrbState.THINKING -> Color.parseColor("#FF9900")
+            else -> Color.parseColor("#FF0033") // Red Theme
         }
 
-        // 60-120 FPS continuous buttery-smooth render loop
+        auraPaint.color = Color.argb(35, Color.red(auraColor), Color.green(auraColor), Color.blue(auraColor))
+        canvas.drawCircle(centerX, centerY, baseRadius * 1.15f, auraPaint)
+        auraPaint.color = Color.argb(18, Color.red(auraColor), Color.green(auraColor), Color.blue(auraColor))
+        canvas.drawCircle(centerX, centerY, baseRadius * 1.25f, auraPaint)
+
+        // Red Cyberpunk Palette
+        val (baseR, baseG, baseB) = when (currentState) {
+            OrbState.LISTENING -> arrayOf(0, 255, 102) // Green while listening
+            OrbState.THINKING -> arrayOf(255, 153, 0)   // Orange while thinking
+            else -> arrayOf(255, 20, 50)               // Signature Red Theme
+        }
+
+        // Render each particle with 3D multi-octave fluid wave displacement
+        for (i in 0 until pointCount) {
+            val bp = basePoints[i]
+            val bx = bp[0]
+            val by = bp[1]
+            val bz = bp[2]
+
+            // Video 1 Wave Equation: Multi-frequency surface turbulence
+            val wave1 = sin(bx * freq + time) * cos(by * freq - time * 0.7f)
+            val wave2 = sin(bz * (freq * 1.3f) + time * 1.2f) * 0.5f
+            val wave3 = cos((bx + by) * 2f - time * 1.5f) * 0.3f
+            val totalWave = (wave1 + wave2 + wave3)
+
+            val currentR = baseRadius * (1f + totalWave * intensity)
+
+            // 3D Matrix Rotation (Y then X)
+            val x1 = bx * cosY + bz * sinY
+            val z1 = -bx * sinY + bz * cosY
+
+            val y2 = by * cosX - z1 * sinX
+            val z2 = by * sinX + z1 * cosX
+
+            // Perspective Projection
+            val perspective = (z2 + 2.4f) / 3.4f
+            val screenX = centerX + x1 * currentR * perspective
+            val screenY = centerY + y2 * currentR * perspective
+
+            // Depth Lighting: Front particles glow bright white-hot red
+            val depthRatio = max(0f, min(1f, (z2 + 1f) / 2f))
+            val alpha = (35 + (depthRatio * 220)).toInt()
+            val dotRadius = max(1.0f, 0.8f + depthRatio * 2.6f)
+
+            // Core highlights turn brilliant white in the foreground
+            val finalR = min(255, (baseR + (255 - baseR) * depthRatio * 0.7f).toInt())
+            val finalG = min(255, (baseG + (255 - baseG) * depthRatio * 0.85f).toInt())
+            val finalB = min(255, (baseB + (255 - baseB) * depthRatio * 0.85f).toInt())
+
+            dotPaint.color = Color.argb(alpha, finalR, finalG, finalB)
+            canvas.drawCircle(screenX, screenY, dotRadius, dotPaint)
+        }
+
+        // 60-120 FPS continuous loop
         postInvalidateOnAnimation()
     }
 
