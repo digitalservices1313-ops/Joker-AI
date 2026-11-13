@@ -3,10 +3,13 @@ package com.joker.ai
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.camera2.CameraManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.Settings
@@ -75,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
     private var currentLanguage = "hi_IN"
+    private var isTorchOn = false
 
     private lateinit var layoutHome: View
     private lateinit var layoutChat: View
@@ -84,6 +88,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var jokerOrb: JokerOrbView
     private lateinit var tvOrbStatus: TextView
     private lateinit var tvGreeting: TextView
+    private lateinit var tvWeatherTemp: TextView
     private lateinit var chatLog: TextView
     private lateinit var scrollView: ScrollView
     private lateinit var micBtn: ImageButton
@@ -123,6 +128,7 @@ class MainActivity : AppCompatActivity() {
         jokerOrb = findViewById(R.id.jokerOrb)
         tvOrbStatus = findViewById(R.id.tvOrbStatus)
         tvGreeting = findViewById(R.id.tvGreeting)
+        tvWeatherTemp = findViewById(R.id.tvWeatherTemp)
         chatLog = findViewById(R.id.tvChat)
         scrollView = findViewById(R.id.scrollView)
 
@@ -140,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         val btnLanguage = findViewById<View>(R.id.btnLanguage)
 
         updateGreeting()
+        updateBatteryDiagnostics() // Real Battery on Card
         setupTTS()
         setupSpeechRecognizer()
 
@@ -182,8 +189,46 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Initially Orb is completely STILL
         setOrbIdle()
+    }
+
+    // ==========================================
+    // REAL BATTERY DIAGNOSTICS
+    // ==========================================
+    private fun getBatteryInfo(): Pair<Int, Boolean> {
+        val batteryStatus: Intent? = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val batteryPct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+        val status: Int = batteryStatus?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        return Pair(batteryPct, isCharging)
+    }
+
+    private fun updateBatteryDiagnostics() {
+        val (batteryLevel, isCharging) = getBatteryInfo()
+        val chargingIcon = if (isCharging) "⚡ " else "🔋 "
+        tvWeatherTemp.text = "$chargingIcon$batteryLevel%"
+    }
+
+    // ==========================================
+    // HARDWARE TORCH / FLASHLIGHT CONTROL
+    // ==========================================
+    private fun setTorchMode(enable: Boolean) {
+        try {
+            val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val cameraId = cameraManager.cameraIdList.firstOrNull()
+            if (cameraId != null) {
+                cameraManager.setTorchMode(cameraId, enable)
+                isTorchOn = enable
+                val toastMsg = if (enable) "🔦 Flashlight ON" else "🔦 Flashlight OFF"
+                Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Flashlight hardware nahi mila", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Torch error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun openRealGoogleLens() {
@@ -213,6 +258,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchToHomeTab() {
+        updateBatteryDiagnostics()
         layoutHome.visibility = View.VISIBLE
         layoutChat.visibility = View.GONE
         tvNavHomeText.setTextColor(Color.parseColor("#FF0033"))
@@ -309,7 +355,7 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
             .setTitle("🚀 Joker AI System Updates")
-            .setMessage("Version: 3.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Voice-Reactive Freeze/Pulse 3D Orb\n• Direct Google Lens App Scanner\n• Neural Memory Vault\n• Voice Language Switcher\n• Autonomous App Actions")
+            .setMessage("Version: 4.0.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Hardware Torch / Flashlight Controller\n• Real-Time Battery Diagnostics on Card\n• Voice-Reactive Freeze/Pulse 3D Orb\n• Direct Google Lens App Scanner\n• Neural Memory Vault\n• Autonomous App Actions")
             .setPositiveButton("Awesome", null)
             .show()
     }
@@ -323,7 +369,6 @@ class MainActivity : AppCompatActivity() {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         runOnUiThread {
-                            // Bolte waqt Orb ghoomega aur pulse karega
                             jokerOrb.setState(OrbState.SPEAKING)
                             tvOrbStatus.text = "● SPEAKING... // VOCAL FEED"
                         }
@@ -341,7 +386,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Shanti hone par Orb turant STILL ho jayega
     private fun setOrbIdle() {
         jokerOrb.setState(OrbState.IDLE)
         tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
@@ -356,7 +400,6 @@ class MainActivity : AppCompatActivity() {
                 setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
                         micBtn.setColorFilter(Color.parseColor("#00FF66"))
-                        // User bolna shuru karega toh Orb move hoga
                         jokerOrb.setState(OrbState.LISTENING)
                         tvOrbStatus.text = "● LISTENING... // AUDIO FEED ACTIVE"
                     }
@@ -373,8 +416,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onError(error: Int) {
-                        isListening = false
-                        micBtn.clearColorFilter()
+                        resetMicUI()
                         if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
                             setOrbIdle()
                             Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
@@ -384,8 +426,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResults(results: Bundle?) {
-                        isListening = false
-                        micBtn.clearColorFilter()
+                        resetMicUI()
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val spokenText = matches?.firstOrNull()
                         if (!spokenText.isNullOrEmpty()) {
@@ -407,7 +448,7 @@ class MainActivity : AppCompatActivity() {
     private fun startInAppListening() {
         if (isListening) {
             speechRecognizer?.stopListening()
-            isListening = false
+            resetMicUI()
             setOrbIdle()
             return
         }
@@ -477,7 +518,6 @@ class MainActivity : AppCompatActivity() {
                     chatLog.append("🃏 Joker AI: ${response.reply}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
 
-                    // TTS starts -> Orb moves and pulses with speech
                     tts?.speak(response.reply, TextToSpeech.QUEUE_FLUSH, null, "JokerResponse")
 
                     val finalAction = detectAction(response.action, userText)
@@ -506,6 +546,9 @@ class MainActivity : AppCompatActivity() {
         }
         val lower = userText.lowercase()
         return when {
+            (lower.contains("torch") || lower.contains("flashlight")) && (lower.contains("off") || lower.contains("band")) -> "TORCH_OFF"
+            lower.contains("torch") || lower.contains("flashlight") -> "TORCH_ON"
+            lower.contains("battery") -> "BATTERY_CHECK"
             lower.contains("youtube") -> "OPEN_YOUTUBE"
             lower.contains("whatsapp") -> "OPEN_WHATSAPP"
             lower.contains("camera") -> "OPEN_CAMERA"
@@ -528,6 +571,21 @@ class MainActivity : AppCompatActivity() {
             delay(1000)
             try {
                 when (action) {
+                    "TORCH_ON" -> {
+                        setTorchMode(true)
+                    }
+                    "TORCH_OFF" -> {
+                        setTorchMode(false)
+                    }
+                    "BATTERY_CHECK" -> {
+                        val (pct, isCharging) = getBatteryInfo()
+                        val chargingText = if (isCharging) "charging par hai" else "charging par nahi hai"
+                        val voiceMsg = "Boss, phone mein $pct% battery hai aur phone $chargingText."
+                        tts?.speak(voiceMsg, TextToSpeech.QUEUE_FLUSH, null, "JokerBattery")
+                        chatLog.append("🃏 Joker AI: $voiceMsg\n\n")
+                        scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+                        updateBatteryDiagnostics()
+                    }
                     "OPEN_YOUTUBE" -> {
                         val launchIntent = packageManager.getLaunchIntentForPackage("com.google.android.youtube")
                         if (launchIntent != null) {
@@ -571,15 +629,17 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "App open error: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Action execute error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     override fun onDestroy() {
+        if (isTorchOn) {
+            setTorchMode(false)
+        }
         speechRecognizer?.destroy()
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
     }
-} 
