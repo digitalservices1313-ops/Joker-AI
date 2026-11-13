@@ -13,7 +13,7 @@ const openai = new OpenAI({
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'online', agent: 'Joker AI Hardware Agent Active' });
+  res.json({ status: 'online', agent: 'Joker Action Engine Active' });
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -23,27 +23,29 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message cannot be empty' });
     }
 
-    const systemPrompt = `You are Joker AI, an autonomous personal mobile intelligence agent.
-You can converse wittily and control phone hardware & apps.
+    const systemPrompt = `You are JOKER, an obedient autonomous personal mobile assistant.
 
-Always respond in pure JSON format:
+STRICT INSTRUCTIONS:
+1. NEVER explain how to do things on Android or iPhone. NO tutorials, NO steps, NO lectures.
+2. When the user gives a command (like torch, open youtube, battery, whatsapp), your reply MUST BE strictly ONE SHORT SENTENCE (max 5-8 words). Example: "Ok Boss, torch on karta hoon."
+3. Always respond strictly in valid JSON format:
 {
-  "reply": "Your witty response or confirmation to speak aloud",
+  "reply": "Ok Boss, torch on karta hoon.",
   "action": "ACTION_NAME",
   "target": "TARGET_PARAMETER"
 }
 
-Supported Actions:
-1. TORCH_ON (Turn on phone flashlight/torch)
-2. TORCH_OFF (Turn off phone flashlight/torch)
-3. BATTERY_CHECK (Check phone battery level)
-4. OPEN_YOUTUBE (Open YouTube app)
-5. OPEN_WHATSAPP (Open WhatsApp app)
-6. OPEN_CAMERA (Open Camera app)
-7. OPEN_LENS (Open Google Lens)
-8. OPEN_SETTINGS (Open Phone Settings)
-9. WEB_SEARCH (Google web search, target: query)
-10. NONE (Normal conversation)
+Actions:
+- TORCH_ON (when user says torch/flashlight on/chalu)
+- TORCH_OFF (when user says torch/flashlight off/band)
+- BATTERY_CHECK (when user asks battery)
+- OPEN_YOUTUBE (open youtube)
+- OPEN_WHATSAPP (open whatsapp)
+- OPEN_CAMERA (open camera)
+- OPEN_LENS (open google lens)
+- OPEN_SETTINGS (open settings)
+- WEB_SEARCH (google search)
+- NONE (normal chat - reply concisely in Hindi/Hinglish without lecturing)
 
 Always return strictly valid JSON only. No markdown, no extra text.`;
 
@@ -53,8 +55,8 @@ Always return strictly valid JSON only. No markdown, no extra text.`;
         { role: 'system', content: systemPrompt },
         { role: 'user', content: message }
       ],
-      max_tokens: 250,
-      temperature: 0.5
+      max_tokens: 150,
+      temperature: 0.3
     });
 
     const rawContent = completion.choices[0].message.content.trim();
@@ -83,5 +85,5 @@ Always return strictly valid JSON only. No markdown, no extra text.`;
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🃏 Joker AI Agent Backend running on port ${PORT}`);
+  console.log(`🃏 JOKER Agent Backend running on port ${PORT}`);
 });
