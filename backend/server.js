@@ -13,7 +13,7 @@ const openai = new OpenAI({
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'online', agent: 'Joker AI Agent Action Engine Active' });
+  res.json({ status: 'online', agent: 'Joker AI Hardware Agent Active' });
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -23,30 +23,29 @@ app.post('/api/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message cannot be empty' });
     }
 
-    const systemPrompt = `You are Joker AI, an autonomous mobile intelligence agent.
-You can converse wittily and also execute Android actions.
+    const systemPrompt = `You are Joker AI, an autonomous personal mobile intelligence agent.
+You can converse wittily and control phone hardware & apps.
 
-If the user wants to perform an action, you MUST respond in pure JSON format:
+Always respond in pure JSON format:
 {
-  "reply": "Your witty confirmation message to speak to user",
+  "reply": "Your witty response or confirmation to speak aloud",
   "action": "ACTION_NAME",
   "target": "TARGET_PARAMETER"
 }
 
-Supported actions:
-1. OPEN_YOUTUBE (target: optional search term or empty)
-2. OPEN_WHATSAPP (target: empty)
-3. OPEN_CAMERA (target: empty)
-4. OPEN_SETTINGS (target: empty)
-5. WEB_SEARCH (target: search query)
+Supported Actions:
+1. TORCH_ON (Turn on phone flashlight/torch)
+2. TORCH_OFF (Turn off phone flashlight/torch)
+3. BATTERY_CHECK (Check phone battery level)
+4. OPEN_YOUTUBE (Open YouTube app)
+5. OPEN_WHATSAPP (Open WhatsApp app)
+6. OPEN_CAMERA (Open Camera app)
+7. OPEN_LENS (Open Google Lens)
+8. OPEN_SETTINGS (Open Phone Settings)
+9. WEB_SEARCH (Google web search, target: query)
+10. NONE (Normal conversation)
 
-If the user is just chatting normally and NOT asking to open an app or search, respond in pure JSON format:
-{
-  "reply": "Your witty response here",
-  "action": "NONE",
-  "target": ""
-}
-Always return strictly valid JSON only. No markdown ticks, no extra text.`;
+Always return strictly valid JSON only. No markdown, no extra text.`;
 
     const completion = await openai.chat.completions.create({
       model: process.env.LLM_MODEL || 'openai/gpt-oss-20b',
@@ -61,7 +60,6 @@ Always return strictly valid JSON only. No markdown ticks, no extra text.`;
     const rawContent = completion.choices[0].message.content.trim();
     let parsed;
     try {
-      // Clean JSON if model added backticks
       const cleanJson = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleanJson);
     } catch (e) {
