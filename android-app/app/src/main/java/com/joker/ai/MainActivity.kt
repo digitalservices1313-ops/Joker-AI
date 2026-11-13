@@ -76,7 +76,6 @@ class MainActivity : AppCompatActivity() {
     private var tts: TextToSpeech? = null
     private var speechRecognizer: SpeechRecognizer? = null
     private var isListening = false
-    private var currentLanguage = "hi_IN"
     private var isTorchOn = false
 
     private lateinit var layoutHome: View
@@ -98,18 +97,6 @@ class MainActivity : AppCompatActivity() {
             startInAppListening()
         } else {
             Toast.makeText(this, "Microphone permission zaroori hai", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private val fallbackSpeechLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK && result.data != null) {
-            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spokenText = matches?.firstOrNull()
-            if (!spokenText.isNullOrEmpty()) {
-                processMessage(spokenText)
-            }
-        } else {
-            setOrbIdle()
         }
     }
 
@@ -146,12 +133,14 @@ class MainActivity : AppCompatActivity() {
 
         updateGreeting()
         updateBatteryDiagnostics()
-        setupTTS()
-        setupSpeechRecognizer()
+        setupIndianTTS()
+        setupInAppSpeechRecognizer()
 
+        // Tab Navigation
         navHome.setOnClickListener { switchToHomeTab() }
         navChat.setOnClickListener { switchToChatTab() }
 
+        // Center Mic -> Home screen par in-app mic bina Google Assistant ke
         micBtn.setOnClickListener {
             switchToHomeTab()
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -189,16 +178,154 @@ class MainActivity : AppCompatActivity() {
         setOrbIdle()
     }
 
+    // ==========================================
+    // 🇮🇳 NATURAL INDIAN HINDI TTS VOICE
+    // ==========================================
+    private fun setupIndianTTS() {
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val indianHindi = Locale("hi", "IN")
+                val result = tts?.setLanguage(indianHindi)
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    tts?.language = Locale("hi")
+                }
+
+                // Indian voice selection
+                try {
+                    val voices = tts?.voices
+                    val bestIndianVoice = voices?.firstOrNull {
+                        it.locale.language == "hi" && it.locale.country == "IN" && !it.isNetworkConnectionRequired
+                    } ?: voices?.firstOrNull { it.locale.language == "hi" }
+                    if (bestIndianVoice != null) {
+                        tts?.voice = bestIndianVoice
+                    }
+                } catch (_: Exception) {}
+
+                tts?.setPitch(1.0f)
+                tts?.setSpeechRate(1.0f)
+
+                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        runOnUiThread {
+                            jokerOrb.setState(OrbState.SPEAKING)
+                            tvOrbStatus.text = "● SPEAKING... // VOCAL FEED"
+                        }
+                    }
+
+                    override fun onDone(utteranceId: String?) {
+                        runOnUiThread { setOrbIdle() }
+                    }
+
+                    override fun onError(utteranceId: String?) {
+                        runOnUiThread { setOrbIdle() }
+                    }
+                })
+            }
+        }
+    }
+
+    // ==========================================
+    // 🎙️ PURE IN-APP MIC (No Google Assistant!)
+    // ==========================================
+    private fun setupInAppSpeechRecognizer() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) return
+
+        try {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+                setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        micBtn.setColorFilter(Color.parseColor("#00FF66"))
+                        jokerOrb.setState(OrbState.LISTENING)
+                        tvOrbStatus.text = "● LISTENING... // AUDIO ACTIVE"
+                    }
+
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+
+                    override fun onEndOfSpeech() {
+                        isListening = false
+                        jokerOrb.setState(OrbState.THINKING)
+                        tvOrbStatus.text = "● PROCESSING... // NEURAL NET"
+                        resetMicUI()
+                    }
+
+                    override fun onError(error: Int) {
+                        resetMicUI()
+                        setOrbIdle()
+                        if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                            Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    override fun onResults(results: Bundle?) {
+                        resetMicUI()
+                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val spokenText = matches?.firstOrNull()
+                        if (!spokenText.isNullOrEmpty()) {
+                            processMessage(spokenText)
+                        } else {
+                            setOrbIdle()
+                        }
+                    }
+
+                    override fun onPartialResults(partialResults: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
+            }
+        } catch (e: Exception) {
+            speechRecognizer = null
+        }
+    }
+
+    private fun startInAppListening() {
+        if (isListening) {
+            speechRecognizer?.stopListening()
+            resetMicUI()
+            setOrbIdle()
+            return
+        }
+
+        if (speechRecognizer != null) {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale("hi", "IN"))
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
+                putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, "hi-IN")
+                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            }
+            isListening = true
+            try {
+                speechRecognizer?.startListening(intent)
+            } catch (e: Exception) {
+                resetMicUI()
+                setOrbIdle()
+            }
+        }
+    }
+
+    private fun resetMicUI() {
+        isListening = false
+        micBtn.clearColorFilter()
+    }
+
+    private fun setOrbIdle() {
+        jokerOrb.setState(OrbState.IDLE)
+        tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
+        resetMicUI()
+    }
+
+    // ==========================================
+    // 🔋 DIRECT BATTERY (No Broadcast Block)
+    // ==========================================
     private fun getBatteryInfo(): Pair<Int, Boolean> {
         return try {
             val bm = getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-            val pct = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
-            val isCharging = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                bm?.isCharging ?: false
-            } else false
+            val pct = bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 85
+            val isCharging = bm?.isCharging ?: false
             Pair(pct, isCharging)
         } catch (e: Exception) {
-            Pair(100, false)
+            Pair(85, false)
         }
     }
 
@@ -208,6 +335,9 @@ class MainActivity : AppCompatActivity() {
         tvWeatherTemp.text = "$chargingIcon$batteryLevel%"
     }
 
+    // ==========================================
+    // 🔦 FLASHLIGHT CONTROLLER
+    // ==========================================
     private fun setTorchMode(enable: Boolean) {
         try {
             val cameraManager = getSystemService(Context.CAMERA_SERVICE) as? CameraManager
@@ -240,14 +370,7 @@ class MainActivity : AppCompatActivity() {
             }
             startActivity(googleAppLensIntent)
         } catch (e: Exception) {
-            try {
-                val altIntent = Intent("com.google.ar.lens.LENS_ACTIVITY").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                startActivity(altIntent)
-            } catch (e2: Exception) {
-                Toast.makeText(this, "Google Lens phone mein nahi mila", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(this, "Google Lens phone mein nahi mila", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -286,7 +409,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("🧠 Joker Neural Memory Vault")
+            .setTitle("🧠 JOKER Neural Memory Vault")
             .setMessage(memoryList)
             .setPositiveButton("➕ Add Memory") { _, _ ->
                 val input = EditText(this).apply {
@@ -321,25 +444,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLanguageDialog() {
-        val languages = arrayOf("🇮🇳 Hinglish (Default Mix)", "🇮🇳 Hindi (हिंदी)", "🇬🇧 English (US)")
+        val languages = arrayOf("🇮🇳 Hindi (हिंदी - Indian Voice)", "🇬🇧 English (US)")
         AlertDialog.Builder(this)
             .setTitle("🌐 Select Voice Language")
             .setItems(languages) { _, which ->
                 when (which) {
                     0 -> {
-                        currentLanguage = "hi_IN"
-                        tts?.language = Locale("hi", "IN")
-                        Toast.makeText(this, "Language: Hinglish Active", Toast.LENGTH_SHORT).show()
+                        setupIndianTTS()
+                        Toast.makeText(this, "Language: हिंदी सक्रिय", Toast.LENGTH_SHORT).show()
+                        tts?.speak("नमस्ते बॉस, हिंदी आवाज सक्रिय है।", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
                     }
                     1 -> {
-                        currentLanguage = "hi"
-                        tts?.language = Locale("hi")
-                        Toast.makeText(this, "Language: हिंदी सक्रिय", Toast.LENGTH_SHORT).show()
-                    }
-                    2 -> {
-                        currentLanguage = "en"
                         tts?.language = Locale.US
                         Toast.makeText(this, "Language: English Active", Toast.LENGTH_SHORT).show()
+                        tts?.speak("English voice synthesis activated, Boss!", TextToSpeech.QUEUE_FLUSH, null, "LangTest")
                     }
                 }
             }
@@ -348,174 +466,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
-            .setTitle("🚀 Joker AI System Updates")
-            .setMessage("Version: 4.0.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Hardware Torch / Flashlight Controller\n• Real-Time Battery Diagnostics on Card\n• Voice-Reactive Freeze/Pulse 3D Orb\n• Direct Google Lens App Scanner\n• Neural Memory Vault\n• Autonomous App Actions")
+            .setTitle("🚀 JOKER System Updates")
+            .setMessage("Version: 4.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Fast Obedient Action Engine\n• Center Bold JOKER Interface\n• 44% Watermark Logo in Chat\n• Pure Indian Hindi Voice Synthesis\n• In-App Mic (No Google Assistant)\n• Hardware Torch & Battery Diagnostics")
             .setPositiveButton("Awesome", null)
             .show()
     }
 
-    private fun setupTTS() {
-        tts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale("hi", "IN")
-                tts?.setSpeechRate(1.05f)
-
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {
-                        runOnUiThread {
-                            jokerOrb.setState(OrbState.SPEAKING)
-                            tvOrbStatus.text = "● SPEAKING... // VOCAL FEED"
-                        }
-                    }
-
-                    override fun onDone(utteranceId: String?) {
-                        runOnUiThread { setOrbIdle() }
-                    }
-
-                    override fun onError(utteranceId: String?) {
-                        runOnUiThread { setOrbIdle() }
-                    }
-                })
-            }
-        }
-    }
-
-    private fun setOrbIdle() {
-        jokerOrb.setState(OrbState.IDLE)
-        tvOrbStatus.text = "● STANDBY // READY FOR COMMANDS"
-        resetMicUI()
-    }
-
-    private fun resetMicUI() {
-        isListening = false
-        micBtn.clearColorFilter()
-    }
-
-    private fun setupSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) return
-
-        try {
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(object : RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {
-                        micBtn.setColorFilter(Color.parseColor("#00FF66"))
-                        jokerOrb.setState(OrbState.LISTENING)
-                        tvOrbStatus.text = "● LISTENING... // AUDIO FEED ACTIVE"
-                    }
-
-                    override fun onBeginningOfSpeech() {}
-                    override fun onRmsChanged(rmsdB: Float) {}
-                    override fun onBufferReceived(buffer: ByteArray?) {}
-
-                    override fun onEndOfSpeech() {
-                        isListening = false
-                        jokerOrb.setState(OrbState.THINKING)
-                        tvOrbStatus.text = "● PROCESSING... // NEURAL NET"
-                        resetMicUI()
-                    }
-
-                    override fun onError(error: Int) {
-                        resetMicUI()
-                        if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                            setOrbIdle()
-                            Toast.makeText(this@MainActivity, "Kuch sunai nahi diya, dobara boliye", Toast.LENGTH_SHORT).show()
-                        } else {
-                            startFallbackVoiceInput()
-                        }
-                    }
-
-                    override fun onResults(results: Bundle?) {
-                        resetMicUI()
-                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        val spokenText = matches?.firstOrNull()
-                        if (!spokenText.isNullOrEmpty()) {
-                            processMessage(spokenText)
-                        } else {
-                            setOrbIdle()
-                        }
-                    }
-
-                    override fun onPartialResults(partialResults: Bundle?) {}
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
-                })
-            }
-        } catch (e: Exception) {
-            speechRecognizer = null
-        }
-    }
-
-    private fun startInAppListening() {
-        if (isListening) {
-            speechRecognizer?.stopListening()
-            resetMicUI()
-            setOrbIdle()
-            return
-        }
-
-        val langLocale = when (currentLanguage) {
-            "hi" -> Locale("hi")
-            "en" -> Locale.US
-            else -> Locale.getDefault()
-        }
-
-        if (speechRecognizer != null) {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, langLocale)
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-            }
-            isListening = true
-            try {
-                speechRecognizer?.startListening(intent)
-            } catch (e: Exception) {
-                startFallbackVoiceInput()
-            }
-        } else {
-            startFallbackVoiceInput()
-        }
-    }
-
-    private fun startFallbackVoiceInput() {
-        resetMicUI()
-        jokerOrb.setState(OrbState.LISTENING)
-        tvOrbStatus.text = "● LISTENING... // AUDIO IN"
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-        }
-        try {
-            fallbackSpeechLauncher.launch(intent)
-        } catch (e: Exception) {
-            setOrbIdle()
-            Toast.makeText(this, "Voice recognition support nahi hai", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun processMessage(userText: String) {
-        chatLog.append("\nYou: $userText\n")
-        chatLog.append("🃏 Joker AI: Soch raha hoon... 💭\n")
-        scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
-
-        jokerOrb.setState(OrbState.THINKING)
-        tvOrbStatus.text = "● THINKING... // NEURAL PROCESSING"
-
-        val memoryContext = getMemoryContext()
-        val finalPrompt = if (memoryContext.isNotEmpty()) {
-            "[$memoryContext] $userText"
-        } else {
-            userText
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
+    CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = api.sendMessage(ChatRequest(finalPrompt))
                 withContext(Dispatchers.Main) {
                     val currentText = chatLog.text.toString()
-                    val cleanText = currentText.replace("🃏 Joker AI: Soch raha hoon... 💭\n", "")
+                    val cleanText = currentText.replace("🃏 JOKER: Soch raha hoon... 💭\n", "")
                     chatLog.text = cleanText
-                    chatLog.append("🃏 Joker AI: ${response.reply}\n\n")
+                    chatLog.append("🃏 JOKER: ${response.reply}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
 
+                    // Indian Hindi TTS Voice
                     tts?.speak(response.reply, TextToSpeech.QUEUE_FLUSH, null, "JokerResponse")
 
                     val finalAction = detectAction(response.action, userText)
@@ -529,9 +496,9 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     setOrbIdle()
                     val currentText = chatLog.text.toString()
-                    val cleanText = currentText.replace("🃏 Joker AI: Soch raha hoon... 💭\n", "")
+                    val cleanText = currentText.replace("🃏 JOKER: Soch raha hoon... 💭\n", "")
                     chatLog.text = cleanText
-                    chatLog.append("🃏 Joker AI [Error]: ${e.localizedMessage ?: "Connection error"}\n\n")
+                    chatLog.append("🃏 JOKER [Error]: ${e.localizedMessage ?: "Connection error"}\n\n")
                     scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
                 }
             }
@@ -566,7 +533,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun executeAgentAction(action: String, target: String) {
         CoroutineScope(Dispatchers.Main).launch {
-            delay(1000)
+            delay(800)
             try {
                 when (action) {
                     "TORCH_ON" -> {
@@ -580,7 +547,7 @@ class MainActivity : AppCompatActivity() {
                         val chargingText = if (isCharging) "charging par hai" else "charging par nahi hai"
                         val voiceMsg = "Boss, phone mein $pct% battery hai aur phone $chargingText."
                         tts?.speak(voiceMsg, TextToSpeech.QUEUE_FLUSH, null, "JokerBattery")
-                        chatLog.append("🃏 Joker AI: $voiceMsg\n\n")
+                        chatLog.append("🃏 JOKER: $voiceMsg\n\n")
                         scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
                         updateBatteryDiagnostics()
                     }
