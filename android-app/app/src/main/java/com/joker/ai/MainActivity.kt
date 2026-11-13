@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         navHome.setOnClickListener { switchToHomeTab() }
         navChat.setOnClickListener { switchToChatTab() }
 
-        // Center Mic -> Home screen par in-app mic bina Google Assistant ke
+        // Center Mic -> Direct In-App listening without Google Assistant
         micBtn.setOnClickListener {
             switchToHomeTab()
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -190,7 +190,6 @@ class MainActivity : AppCompatActivity() {
                     tts?.language = Locale("hi")
                 }
 
-                // Indian voice selection
                 try {
                     val voices = tts?.voices
                     val bestIndianVoice = voices?.firstOrNull {
@@ -199,7 +198,9 @@ class MainActivity : AppCompatActivity() {
                     if (bestIndianVoice != null) {
                         tts?.voice = bestIndianVoice
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    // Safe fallback
+                }
 
                 tts?.setPitch(1.0f)
                 tts?.setSpeechRate(1.0f)
@@ -467,12 +468,27 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdatesDialog() {
         AlertDialog.Builder(this)
             .setTitle("🚀 JOKER System Updates")
-            .setMessage("Version: 4.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Fast Obedient Action Engine\n• Center Bold JOKER Interface\n• 44% Watermark Logo in Chat\n• Pure Indian Hindi Voice Synthesis\n• In-App Mic (No Google Assistant)\n• Hardware Torch & Battery Diagnostics")
+            .setMessage("Version: 4.5.0 (Latest)\nStatus: All Neural Systems Operational\n\nFeatures:\n• Fast Direct Action Engine\n• Center Bold JOKER Interface\n• 44% Watermark Logo in Chat\n• Pure Indian Hindi Voice Synthesis\n• In-App Mic (No Google Assistant)\n• Hardware Torch & Battery Diagnostics")
             .setPositiveButton("Awesome", null)
             .show()
     }
 
-    CoroutineScope(Dispatchers.IO).launch {
+    private fun processMessage(userText: String) {
+        chatLog.append("\nYou: $userText\n")
+        chatLog.append("🃏 JOKER: Soch raha hoon... 💭\n")
+        scrollView.post { scrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+
+        jokerOrb.setState(OrbState.THINKING)
+        tvOrbStatus.text = "● THINKING... // NEURAL PROCESSING"
+
+        val memoryContext = getMemoryContext()
+        val finalPrompt = if (memoryContext.isNotEmpty()) {
+            "[$memoryContext] $userText"
+        } else {
+            userText
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = api.sendMessage(ChatRequest(finalPrompt))
                 withContext(Dispatchers.Main) {
@@ -610,4 +626,4 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-}   
+}
