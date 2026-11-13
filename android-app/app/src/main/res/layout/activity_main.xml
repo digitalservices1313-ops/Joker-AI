@@ -4,60 +4,55 @@
     android:layout_height="match_parent"
     android:background="#08080C">
 
-    <!-- Top Bar -->
-    <LinearLayout
+    <!-- Top Bar: 3 Lines Removed, Centered Big JOKER Title, Avatar on Right -->
+    <RelativeLayout
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="6dp">
+        android:paddingTop="14dp"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:id="@+id/btnMenu"
+        <!-- Center: Big JOKER Title & Greeting -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="☰"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:paddingEnd="12dp" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_centerInParent="true"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tvHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Joker AI"
+                android:text="JOKER"
                 android:textColor="#FF0033"
-                android:textSize="20sp"
+                android:textSize="26sp"
+                android:letterSpacing="0.10"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvGreeting"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Good afternoon, Boss"
+                android:text="Good evening, Boss"
                 android:textColor="#777788"
                 android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Right Side: Joker Logo Avatar -->
         <ImageView
             android:id="@+id/ivHeaderLogo"
             android:layout_width="38dp"
             android:layout_height="38dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
             android:src="@drawable/joker_logo"
             android:scaleType="fitCenter"
             android:contentDescription="Avatar" />
-    </LinearLayout>
+    </RelativeLayout>
 
-    <!-- TAB 1: HOME PAGE (Sirf Bada Orb + System Cards - Zero Chat Clutter) -->
+    <!-- TAB 1: HOME PAGE (Clean Orb + Diagnostics + Quick Pills) -->
     <ScrollView
         android:id="@+id/layoutHome"
         android:layout_width="match_parent"
@@ -75,7 +70,7 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="12dp">
 
-            <!-- Big Majestic 3D Fluid Red Particle Orb -->
+            <!-- 3D Fluid Red Particle Orb -->
             <com.joker.ai.JokerOrbView
                 android:id="@+id/jokerOrb"
                 android:layout_width="260dp"
@@ -97,7 +92,7 @@
                 android:letterSpacing="0.04"
                 android:textStyle="bold" />
 
-            <!-- Weather & System Status Card -->
+            <!-- Battery & System Diagnostics Card -->
             <LinearLayout
                 android:id="@+id/cardDiagnostics"
                 android:layout_width="match_parent"
@@ -112,7 +107,7 @@
                     android:id="@+id/tvWeatherTemp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="32°C"
+                    android:text="🔋 85%"
                     android:textColor="#FFFFFF"
                     android:textSize="24sp"
                     android:textStyle="bold" />
@@ -127,7 +122,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Clear Sky // Neural Engine Online"
+                        android:text="System Diagnostics // Active"
                         android:textColor="#DDDDDD"
                         android:textSize="12sp"
                         android:textStyle="bold" />
@@ -135,7 +130,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Memory: Active | Cloud Link: 99.8%"
+                        android:text="Hardware Link: OK | Neural Core: 99.8%"
                         android:textColor="#777788"
                         android:textSize="10sp" />
                 </LinearLayout>
@@ -143,7 +138,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="☀️"
+                    android:text="⚡"
                     android:textSize="24sp" />
             </LinearLayout>
 
@@ -201,7 +196,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- TAB 2: DEDICATED CHAT PAGE (Chat Tab dabane par khulega) -->
+    <!-- TAB 2: DEDICATED CHAT PAGE WITH 44% WATERMARK LOGO -->
     <LinearLayout
         android:id="@+id/layoutChat"
         android:layout_width="match_parent"
@@ -221,25 +216,41 @@
             android:letterSpacing="0.06"
             android:paddingBottom="8dp" />
 
-        <!-- Chat History Scroll Area -->
-        <ScrollView
-            android:id="@+id/scrollView"
+        <!-- Chat Container with 44% Watermark Background -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="#101016"
-            android:padding="12dp"
-            android:fillViewport="true">
+            android:background="#101016">
 
-            <TextView
-                android:id="@+id/tvChat"
+            <!-- 44% Opacity Joker Logo Watermark (Text ke peeche) -->
+            <ImageView
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center"
+                android:alpha="0.44"
+                android:src="@drawable/joker_logo"
+                android:scaleType="fitCenter"
+                android:contentDescription="Chat Watermark" />
+
+            <!-- Chat Text on top of Watermark -->
+            <ScrollView
+                android:id="@+id/scrollView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Joker AI: Neural link connected. How can I help you, Boss?\n"
-                android:textColor="#DDDDDD"
-                android:textSize="14sp"
-                android:lineSpacingExtra="4dp" />
-        </ScrollView>
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:fillViewport="true">
+
+                <TextView
+                    android:id="@+id/tvChat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="JOKER: Neural link connected. How can I help you, Boss?\n"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp" />
+            </ScrollView>
+        </FrameLayout>
 
         <!-- Typing Input Box and Send Button -->
         <LinearLayout
@@ -274,7 +285,7 @@
 
     </LinearLayout>
 
-    <!-- Bottom Navigation Bar (5 Items: Home, Chat, Center Big Mic, Setting, Updates) -->
+    <!-- Bottom Navigation Bar (5 Items: Home, Chat, Center Elevated Mic, Setting, Updates) -->
     <LinearLayout
         android:id="@+id/bottomDock"
         android:layout_width="match_parent"
@@ -390,6 +401,7 @@
                 android:textSize="17sp" />
 
             <TextView
+                android:id="@+id/tvNavUpdatesText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Updates"
